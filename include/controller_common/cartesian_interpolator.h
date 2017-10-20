@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2010-2017, Robot Control and Pattern Recognition Group, Warsaw University of Technology.
+ * Copyright (c) 2010-2017, Robot Control and Pattern Recognition Group,
+ * Warsaw University of Technology.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +30,7 @@
  */
 
 /*
- * CartesianInterpolator.cpp
+ * CartesianInterpolator.h
  *
  *  Created on: 27 lut 2014
  *      Author: konradb3, dseredyn
@@ -102,20 +103,22 @@ class CartesianInterpolator : public RTT::TaskContext {
   bool check_tolerances_;
 
   bool first_step_;
+  bool empty_trj_received_;
 };
 
 template <class TRAJECTORY_TYPE >
 CartesianInterpolator<TRAJECTORY_TYPE >::CartesianInterpolator(const std::string& name)
-    : RTT::TaskContext(name),
-      trajectory_idx_(0),
-      activate_pose_init_property_(false),
-      last_point_not_set_(false),
-      trajectory_active_(false),
-      check_tolerances_(true),
-      port_cartesian_position_("CartesianPosition_INPORT"),
-      port_cartesian_command_("CartesianPositionCommand_OUTPORT", true),
-      port_trajectory_("CartesianTrajectoryCommand_INPORT"),
-      port_generator_status_out_("generator_status_OUTPORT")
+    : RTT::TaskContext(name)
+    , trajectory_idx_(0)
+    , activate_pose_init_property_(false)
+    , last_point_not_set_(false)
+    , trajectory_active_(false)
+    , check_tolerances_(true)
+    , port_cartesian_position_("CartesianPosition_INPORT")
+    , port_cartesian_command_("CartesianPositionCommand_OUTPORT", true)
+    , port_trajectory_("CartesianTrajectoryCommand_INPORT")
+    , port_generator_status_out_("generator_status_OUTPORT")
+    , empty_trj_received_(false)
 {
 
   this->ports()->addPort(port_cartesian_position_).doc("data type: geometry_msgs::Pose");
@@ -164,6 +167,9 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
 
   if (port_trajectory_.read(trajectory_) == RTT::NewData) {
     trajectory_idx_ = 0;
+    if (trajectory_.count == 0) {
+        empty_trj_received_ = true;
+    }
     old_point_ = setpoint_;
     last_point_not_set_ = true;
     trajectory_active_ = true;
@@ -243,11 +249,19 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
               }
           }
     }
+    else if (empty_trj_received_) {
+        resetTrajectory();
+        generator_status_ = cartesian_status::SUCCESSFUL;
+    }
   }
   else {
     if (trajectory_idx_ > 0 && trajectory_idx_ == trajectory_.count && !last_point_not_set_) {
       resetTrajectory();
       generator_status_ = cartesian_status::SUCCESSFUL;
+    }
+    else if (empty_trj_received_) {
+        resetTrajectory();
+        generator_status_ = cartesian_status::SUCCESSFUL;
     }
   }
 
@@ -261,6 +275,7 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
 template <class TRAJECTORY_TYPE >
 void CartesianInterpolator<TRAJECTORY_TYPE >::resetTrajectory() {
   trajectory_idx_ = 0;
+  empty_trj_received_ = false;
   trajectory_ = TRAJECTORY_TYPE();
 }
 

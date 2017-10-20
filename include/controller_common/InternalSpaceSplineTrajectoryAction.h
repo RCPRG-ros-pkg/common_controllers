@@ -103,8 +103,6 @@ class InternalSpaceSplineTrajectoryAction : public RTT::TaskContext {
   Joints joint_position_;
   Joints desired_joint_position_;
 
-  ros::Time trajectory_finish_time_;
-
   // RTT action server
   rtt_actionlib::RTTActionServer<control_msgs::FollowJointTrajectoryAction> as_;
   bool goal_active_;
@@ -369,9 +367,6 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
       gh.setRejected(res, "");
       return;
     }
-
-    trajectory_finish_time_ = g->trajectory.header.stamp
-        + g->trajectory.points[g->trajectory.points.size() - 1].time_from_start;
 
     for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
         jnt_command_out_.stiffness[i] = stiffness_(i);

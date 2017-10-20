@@ -49,6 +49,7 @@ class JointImpedance: public RTT::TaskContext {
   VectorNd nullspace_torque_command_;
 
   std::vector<double> initial_stiffness_;
+  double damping_;
 
   Eigen::GeneralizedSelfAdjointEigenSolver<MatrixNd > es_;
 
@@ -67,9 +68,11 @@ class JointImpedance: public RTT::TaskContext {
 using namespace RTT;
 
 template <unsigned NUMBER_OF_JOINTS>
-JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name) :
-    RTT::TaskContext(name, PreOperational),
-    port_joint_torque_command_("JointTorqueCommand_OUTPORT", true) {
+JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name)
+    : RTT::TaskContext(name, PreOperational)
+    , port_joint_torque_command_("JointTorqueCommand_OUTPORT", true)
+    , damping_(0.7)
+{
 
   this->ports()->addPort("JointPosition_INPORT", port_joint_position_);
   this->ports()->addPort("JointPositionCommand_INPORT", port_joint_position_command_);
@@ -81,6 +84,7 @@ JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name) :
                          port_nullspace_torque_command_);
 
   this->properties()->addProperty("initial_stiffness", initial_stiffness_);
+  this->properties()->addProperty("damping", damping_);
 }
 
 template <unsigned NUMBER_OF_JOINTS>
@@ -99,6 +103,13 @@ bool JointImpedance<NUMBER_OF_JOINTS>::configureHook() {
   }
 
   nullspace_torque_command_.setZero();
+
+  if (damping_ < 0.5 || damping_ > 2.0) {
+    log(RTT::Error) << "wrong value of damping: " << damping_
+        << ", should be in range [0.5, 2.0]"
+        << Logger::endl;
+    return false;
+  }
 
   for (size_t i = 0; i < initial_stiffness_.size(); i++) {
     k_(i) = initial_stiffness_[i];
@@ -193,7 +204,8 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
 
   tmpNN_ = k0_.cwiseAbs().cwiseSqrt().asDiagonal();
 
-  d_.noalias() = 2.0 * q_.transpose() * 0.7 * tmpNN_ * q_;
+//  d_.noalias() = 2.0 * q_.transpose() * 0.7 * tmpNN_ * q_;    // hard-coded damping is replaced by ROS param damping
+  d_.noalias() = 2.0 * q_.transpose() * damping_ * tmpNN_ * q_;
 
   if (!joint_torque_command_.allFinite()) {
     RTT::Logger::In in("JointImpedance::updateHook");

@@ -105,6 +105,7 @@ class InternalSpaceSplineTrajectoryGenerator : public RTT::TaskContext {
   TRAJECTORY_TYPE trajectory_;
 
   size_t trajectory_idx_;
+  bool empty_trj_received_;
 
   bool first_step_;
 };
@@ -123,7 +124,8 @@ InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::InternalSpaceSplineTra
     , port_internal_space_position_measurement_in_("JointPosition_INPORT")
     , port_is_synchronised_in_("IsSynchronised_INPORT")
     , port_generator_status_out_("generator_status_OUTPORT")
-    , port_stiffness_command_out_("stiffness_command_OUTPORT") {
+    , port_stiffness_command_out_("stiffness_command_OUTPORT")
+    , empty_trj_received_(false) {
   this->ports()->addPort(port_jnt_command_in_);
   this->ports()->addPort(port_internal_space_position_command_out_);
   this->ports()->addPort(port_internal_space_position_measurement_in_);
@@ -199,6 +201,9 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
     if (port_jnt_command_in_.read(jnt_command_in_) == RTT::NewData) {
 // TODO: add command checking
         trajectory_ = jnt_command_in_;
+        if (trajectory_.count_trj == 0) {
+            empty_trj_received_ = true;
+        }
         trajectory_idx_ = 0;
         old_point_ = setpoint_;
         prev_setpoint_ = setpoint_;
@@ -347,6 +352,10 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
             }
         }
     }
+    else if (empty_trj_received_) {
+        resetTrajectory();
+        generator_status_ = internal_space_spline_trajectory_status::SUCCESSFUL;
+    }
     port_generator_status_out_.write(generator_status_);
 
     port_stiffness_command_out_.write(stiffness_command_out_);
@@ -355,8 +364,9 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
 
 template <class TRAJECTORY_TYPE >
 void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::resetTrajectory() {
-  trajectory_idx_ = 0;
-  trajectory_ = TRAJECTORY_TYPE();
+    trajectory_idx_ = 0;
+    empty_trj_received_ = false;
+    trajectory_ = TRAJECTORY_TYPE();
 }
 
 #endif  // CONTROLLER_COMMON_INTERNAL_SPACE_SPLINE_TRAJECTORY_GENERATOR_H_

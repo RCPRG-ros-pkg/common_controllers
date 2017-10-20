@@ -237,7 +237,7 @@ void CartImpAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh) {
         return;
     }
 
-    if (g->pose_trj.points.size() == 0
+/*    if (g->pose_trj.points.size() == 0
             && g->imp_trj.points.size() == 0
             && g->tool_trj.points.size() == 0) {
         cartesian_trajectory_msgs::CartImpResult res;
@@ -247,37 +247,45 @@ void CartImpAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh) {
         RTT::Logger::log() << RTT::Logger::Info << "trajectory rejected: size is zero" << RTT::Logger::endl;
         return;
     }
-
+*/
     pose_command_out_.path_tolerance = g->path_tolerance;
     pose_command_out_.goal_tolerance = g->goal_tolerance;
 
-    if (g->pose_trj.points.size() > 0) {
+    if (g->pose_trj.points.size() == 0 && g->tool_trj.points.size() == 0 &&
+        g->imp_trj.points.size() == 0)
+    {
         pose_command_out_.start = g->pose_trj.header.stamp;
-        for (int i = 0; i < g->pose_trj.points.size(); ++i) {
-            pose_command_out_.trj[i] = g->pose_trj.points[i];
-        }
-        pose_command_out_.count = g->pose_trj.points.size();
+        pose_command_out_.count = 0;
         port_pose_command_out_.write(pose_command_out_);
     }
-
-    if (g->tool_trj.points.size() > 0) {
-        tool_command_out_.start = g->tool_trj.header.stamp;
-        for (int i = 0; i < g->tool_trj.points.size(); ++i) {
-            tool_command_out_.trj[i] = g->tool_trj.points[i];
+    else {
+        if (g->pose_trj.points.size() > 0) {
+            pose_command_out_.start = g->pose_trj.header.stamp;
+            for (int i = 0; i < g->pose_trj.points.size(); ++i) {
+                pose_command_out_.trj[i] = g->pose_trj.points[i];
+            }
+            pose_command_out_.count = g->pose_trj.points.size();
+            port_pose_command_out_.write(pose_command_out_);
         }
-        tool_command_out_.count = g->tool_trj.points.size();
-        port_tool_command_out_.write(tool_command_out_);
-    }
 
-    if (g->imp_trj.points.size() > 0) {
-        imp_command_out_.start = g->imp_trj.header.stamp;
-        for (int i = 0; i < g->imp_trj.points.size(); ++i) {
-            imp_command_out_.trj[i] = g->imp_trj.points[i];
+        if (g->tool_trj.points.size() > 0) {
+            tool_command_out_.start = g->tool_trj.header.stamp;
+            for (int i = 0; i < g->tool_trj.points.size(); ++i) {
+                tool_command_out_.trj[i] = g->tool_trj.points[i];
+            }
+            tool_command_out_.count = g->tool_trj.points.size();
+            port_tool_command_out_.write(tool_command_out_);
         }
-        imp_command_out_.count = g->imp_trj.points.size();
-        port_imp_command_out_.write(imp_command_out_);
-    }
 
+        if (g->imp_trj.points.size() > 0) {
+            imp_command_out_.start = g->imp_trj.header.stamp;
+            for (int i = 0; i < g->imp_trj.points.size(); ++i) {
+                imp_command_out_.trj[i] = g->imp_trj.points[i];
+            }
+            imp_command_out_.count = g->imp_trj.points.size();
+            port_imp_command_out_.write(imp_command_out_);
+        }
+    }
     RTT::Logger::log() << RTT::Logger::Info << "sending trajectory..." << RTT::Logger::endl;
 
     gh.setAccepted();
