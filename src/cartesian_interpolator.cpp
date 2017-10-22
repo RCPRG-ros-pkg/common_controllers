@@ -18,7 +18,8 @@ CartesianInterpolator::CartesianInterpolator(const std::string& name)
       trajectory_ptr_(0),
       activate_pose_init_property_(false),
       last_point_not_set_(false),
-      trajectory_active_(false) {
+      trajectory_active_(false),
+      ns_interval_(0) {
   this->ports()->addPort("CartesianPosition", port_cartesian_position_);
   this->ports()->addPort("CartesianPositionCommand", port_cartesian_command_);
   this->ports()->addPort("CartesianTrajectoryCommand", port_trajectory_);
@@ -27,12 +28,18 @@ CartesianInterpolator::CartesianInterpolator(const std::string& name)
 
   this->addProperty("activate_pose_init", activate_pose_init_property_);
   this->addProperty("init_setpoint", init_setpoint_property_);
+  this->addProperty("ns_interval", ns_interval_);
 }
 
 CartesianInterpolator::~CartesianInterpolator() {
 }
 
 bool CartesianInterpolator::configureHook() {
+  ns_higher_bound_ = ns_interval_ * 1.1;
+  ns_higher_increment_ = ns_interval_ * 1.05;
+  ns_lower_bound_ = ns_interval_ * 0.9;
+  ns_lower_increment_ = ns_interval_ * 0.95;
+
   return true;
 }
 
@@ -54,6 +61,10 @@ bool CartesianInterpolator::startHook() {
   port_generator_active_.write(true);
   last_point_not_set_ = false;
   trajectory_active_ = false;
+
+  last_time_ = rtt_rosclock::host_now();
+  update_hook_iter_ = 0;
+
   return true;
 }
 
@@ -71,6 +82,20 @@ void CartesianInterpolator::updateHook() {
   }
 
   ros::Time now = rtt_rosclock::host_now();
+  if ((ns_higher_bound_ > 0)
+      && (now - last_time_) >= ros::Duration(0, ns_higher_bound_)) {
+    // std::cout << now - last_time_ << std::endl;
+    last_time_ += ros::Duration(0, ns_higher_increment_);
+    now = last_time_;
+  } else if ((ns_lower_bound_ > 0)
+      && ((now - last_time_) <= ros::Duration(0, ns_lower_bound_))
+      && (update_hook_iter_ > 1)) {
+    // std::cout << now - last_time_ << std::endl;
+    last_time_ += ros::Duration(0, ns_lower_increment_);
+    now = last_time_;
+  }
+  last_time_ = now;
+
   if (trajectory_active_ && trajectory_ && (trajectory_->header.stamp < now)) {
     for (; trajectory_ptr_ < trajectory_->points.size(); trajectory_ptr_++) {
       ros::Time trj_time = trajectory_->header.stamp

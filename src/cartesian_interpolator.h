@@ -52,6 +52,17 @@ class CartesianInterpolator : public RTT::TaskContext {
 
   bool last_point_not_set_;
   bool trajectory_active_;
+
+  ros::Time last_time_;
+  int update_hook_iter_;
+
+  int ns_higher_bound_;
+  int ns_higher_increment_;
+  int ns_lower_bound_;
+  int ns_lower_increment_;
+
+  // properties
+  int ns_interval_;
 };
 
 #endif  // CARTESIAN_INTERPOLATOR_H_
