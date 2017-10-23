@@ -169,9 +169,12 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
     trajectory_idx_ = 0;
     if (trajectory_.count == 0) {
         empty_trj_received_ = true;
+        last_point_not_set_ = false;
+    }
+    else {
+        last_point_not_set_ = true;
     }
     old_point_ = setpoint_;
-    last_point_not_set_ = true;
     trajectory_active_ = true;
     generator_status_ = cartesian_status::ACTIVE;
   }
@@ -184,7 +187,6 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
         break;
       }
     }
-
     if (trajectory_idx_ < trajectory_.count) {
       if (trajectory_idx_ == 0) {
         cartesian_trajectory_msgs::CartesianTrajectoryPoint p0;
