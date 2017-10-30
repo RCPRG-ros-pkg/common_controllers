@@ -73,6 +73,7 @@ void CartesianInterpolator::stopHook() {
 }
 
 void CartesianInterpolator::updateHook() {
+  update_hook_iter_++;
   port_generator_active_.write(true);
   if (port_trajectory_.read(trajectory_) == RTT::NewData) {
     trajectory_ptr_ = 0;
