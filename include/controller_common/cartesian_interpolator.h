@@ -227,7 +227,6 @@ void CartesianInterpolator<TRAJECTORY_TYPE >::updateHook() {
     if (!checkTolerance(error, trajectory_.path_tolerance)) {
       resetTrajectory();
       generator_status_ = cartesian_status::PATH_TOLERANCE_VIOLATED;
-      setpoint_ = pose_msr;
     }
     else if (trajectory_idx_ > 0 && trajectory_idx_ == trajectory_.count) {
           ros::Time goal_time = trajectory_.start + trajectory_.trj[trajectory_.count - 1].time_from_start;
