@@ -48,6 +48,7 @@
 #include <rtt/Port.hpp>
 #include <rtt/Property.hpp>
 
+#include <actionlib/server/action_server.h>
 #include <rtt_actionlib/rtt_actionlib.h>
 #include <rtt_actionlib/rtt_action_server.h>
 

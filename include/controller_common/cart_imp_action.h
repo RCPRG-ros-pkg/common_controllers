@@ -40,6 +40,7 @@
 #include "cartesian_trajectory_msgs/CartImpGoal.h"
 #include "controller_common/cartesian_status.h"
 
+#include <actionlib/server/action_server.h>
 #include "rtt_actionlib/rtt_actionlib.h"
 #include "rtt_actionlib/rtt_action_server.h"
 
