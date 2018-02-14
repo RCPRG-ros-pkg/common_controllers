@@ -216,6 +216,7 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::updateHook() {
   if (cycles_ < 100) {
     ++cycles_;
   }
+//  std::cout << getName() << " " << (goal_active_?"t":"f") << " " << cycles_ << " " << generator_status << std::endl;
 
   if (goal_active_ && cycles_ > 2) {
     if (generator_status == 3) {
@@ -324,7 +325,6 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
           << "Trajectory contains invalid goal!" << RTT::endlog();
       res.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL;
       gh.setRejected(res, "");
-      goal_active_ = false;
       return;
     }
 
