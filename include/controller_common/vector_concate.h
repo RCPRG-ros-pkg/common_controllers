@@ -11,8 +11,12 @@
 #include <vector>
 #include <string>
 
+#include <boost/static_assert.hpp>
+
 template <int n1, int n2, int n3, int n4>
 class VectorConcate : public RTT::TaskContext {
+  BOOST_STATIC_ASSERT(n1 > 0);
+  BOOST_STATIC_ASSERT(n2 > 0);
  public:
   explicit VectorConcate(const std::string & name) :
     RTT::TaskContext(name),
@@ -40,8 +44,12 @@ class VectorConcate : public RTT::TaskContext {
 
       output_.template block<n1, 1>(0, 0) = input1_;
       output_.template block<n2, 1>(n1, 0) = input2_;
-      output_.template block<n3, 1>(n1+n2, 0) = input3_;
-      output_.template block<n4, 1>(n1+n2+n3, 0) = input4_;
+      if (n3 != 0) {
+        output_.template block<n3, 1>(n1+n2, 0) = input3_;
+      }
+      if (n4 != 0) {
+        output_.template block<n4, 1>(n1+n2+n3, 0) = input4_;
+      }
       port_output_.write(output_);
     }
   }
