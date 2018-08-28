@@ -16,6 +16,7 @@
   <build_depend>rtt_rosclock</build_depend>
   <build_depend>rtt_actionlib</build_depend>
   <build_depend>cartesian_trajectory_msgs</build_depend>
+  <build_depend>trapezoid_trajectory_msgs</build_depend>
   <build_depend>trajectory_msgs</build_depend>
   <build_depend>control_msgs</build_depend>
   <build_depend>rtt_actionlib</build_depend>

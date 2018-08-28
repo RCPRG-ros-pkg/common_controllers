@@ -163,6 +163,8 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   }
 
   if (port_joint_stiffness_command_.read(k_) != RTT::NewData) {
+    std::cout<<k_<<std::endl;
+    std::cout<<"No stiffness"<<std::endl;
     error();
     Logger::In in("JointImpedance::updateHook");
     Logger::log() << Logger::Error << "no data on port "
