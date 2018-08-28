@@ -32,6 +32,8 @@
 
 #include "controller_common/velocityprofile_spline.hpp"
 
+
+
 namespace KDL {
 
 static inline void generatePowers(int n, double x, double* powers) {
