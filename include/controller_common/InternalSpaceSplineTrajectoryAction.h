@@ -62,6 +62,8 @@
 
 #include "controller_common/InternalSpaceSplineTrajectory_status.h"
 
+using namespace RTT;
+
 template <class TRAJECTORY_TYPE >
 class InternalSpaceSplineTrajectoryAction : public RTT::TaskContext {
  private:
@@ -149,8 +151,8 @@ bool InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::configureHook() {
   RTT::Logger::In in("InternalSpaceSplineTrajectoryAction::configureHook");
 
   if (jointNames_.size() != TRAJECTORY_TYPE::DOFS) {
-    RTT::log(RTT::Error) << "ROS param joint_names has wrong size:"
-                         << jointNames_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << RTT::endlog();
+    Logger::log() << Logger::Error << "ROS param joint_names has wrong size:"
+                         << jointNames_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
     return false;
   }
 
@@ -166,14 +168,14 @@ bool InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::configureHook() {
   remapTable_.resize(TRAJECTORY_TYPE::DOFS);
 
   if (lowerLimits_.size() != TRAJECTORY_TYPE::DOFS) {
-    RTT::log(RTT::Error) << "ROS param lower_limits has wrong size:"
-                         << lowerLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << RTT::endlog();
+    Logger::log() << Logger::Error << "ROS param lower_limits has wrong size:"
+                         << lowerLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
     return false;
   }
 
   if (upperLimits_.size() != TRAJECTORY_TYPE::DOFS) {
-    RTT::log(RTT::Error) << "ROS param upper_limits has wrong size:"
-                         << upperLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << RTT::endlog();
+    Logger::log() << Logger::Error << "ROS param upper_limits has wrong size:"
+                         << upperLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
     return false;
   }
 
@@ -216,7 +218,6 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::updateHook() {
   if (cycles_ < 100) {
     ++cycles_;
   }
-//  std::cout << getName() << " " << (goal_active_?"t":"f") << " " << cycles_ << " " << generator_status << std::endl;
 
   if (goal_active_ && cycles_ > 2) {
     if (generator_status == 3) {
@@ -270,12 +271,12 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
 
     control_msgs::FollowJointTrajectoryResult res;
 
-    RTT::Logger::log(RTT::Logger::Debug) << "Received trajectory contains "
-        << g->trajectory.points.size() << " points" << RTT::endlog();
+    Logger::log() << Logger::Debug << "Received trajectory contains "
+        << g->trajectory.points.size() << " points" << Logger::endl;
 
     if (g->trajectory.points.size() > jnt_command_out_.trj.size()) {
-        RTT::Logger::log(RTT::Logger::Error)
-            << "Trajectory contains too many points" << RTT::endlog();
+        Logger::log() << Logger::Error
+            << "Trajectory contains too many points" << Logger::endl;
         res.error_code =
             control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS;
         gh.setRejected(res, "");
@@ -293,8 +294,8 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
         }
       }
       if (jointId < 0) {
-        RTT::Logger::log(RTT::Logger::Error)
-            << "Trajectory contains invalid joint" << RTT::endlog();
+        Logger::log() << Logger::Error
+            << "Trajectory contains invalid joint" << Logger::endl;
         res.error_code =
             control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS;
         gh.setRejected(res, "");
@@ -311,18 +312,18 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
         if (g->trajectory.points[j].positions[i] > upperLimits_[remapTable_[i]]
             || g->trajectory.points[j].positions[i]
                 < lowerLimits_[remapTable_[i]]) {
-          RTT::Logger::log(RTT::Logger::Debug) << "Invalid goal [" << i << "]: "
+          Logger::log() << Logger::Debug << "Invalid goal [" << i << "]: "
               << upperLimits_[remapTable_[i]] << ">"
               << g->trajectory.points[j].positions[i] << ">"
-              << lowerLimits_[remapTable_[i]] << RTT::endlog();
+              << lowerLimits_[remapTable_[i]] << Logger::endl;
           invalid_goal = true;
         }
       }
     }
 
     if (invalid_goal) {
-      RTT::Logger::log(RTT::Logger::Debug)
-          << "Trajectory contains invalid goal!" << RTT::endlog();
+      Logger::log() << Logger::Debug
+          << "Trajectory contains invalid goal!" << Logger::endl;
       res.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL;
       gh.setRejected(res, "");
       return;
@@ -361,8 +362,8 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
 
     // Sprawdzenie czasu w nagłówku OLD_HEADER_TIMESTAMP
     if (g->trajectory.header.stamp < rtt_rosclock::host_now()) {
-      RTT::Logger::log(RTT::Logger::Debug) << "Old header timestamp"
-          << RTT::endlog();
+      Logger::log() << Logger::Debug << "Old header timestamp"
+          << Logger::endl;
       res.error_code =
           control_msgs::FollowJointTrajectoryResult::OLD_HEADER_TIMESTAMP;
       gh.setRejected(res, "");

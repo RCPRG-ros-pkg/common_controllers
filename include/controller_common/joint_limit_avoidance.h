@@ -24,6 +24,8 @@
 #error EIGEN_RUNTIME_NO_MALLOC must be defined
 #endif
 
+using namespace RTT;
+
 template <unsigned DOFS>
 class JointLimitAvoidance: public RTT::TaskContext {
  public:
@@ -91,13 +93,13 @@ bool JointLimitAvoidance<DOFS>::configureHook() {
 
     if ((limit_range_.size() != DOFS)
         || (max_trq_.size() != DOFS)) {
-        RTT::log(RTT::Error) << "invalid configuration data size" << RTT::endlog();
+        Logger::log() << Logger::Error << "invalid configuration data size" << Logger::endl;
         return false;
     }
 
     for (int i = 0; i < DOFS; ++i) {
         if (limits_[i].size() < 2 || (limits_[i].size()%2) != 0) {
-            RTT::log(RTT::Error) << "wrong limits for joint " << i << RTT::endlog();
+            Logger::log() << Logger::Error << "wrong limits for joint " << i << Logger::endl;
             return false;
         }
     }
@@ -110,14 +112,14 @@ void JointLimitAvoidance<DOFS>::updateHook() {
   if (port_joint_position_.read(joint_position_) != RTT::NewData) {
     RTT::Logger::In in("JointLimitAvoidance::updateHook");
     error();
-    RTT::log(RTT::Error) << "could not read port: " << port_joint_position_.getName() << RTT::endlog();
+    Logger::log() << Logger::Error << "could not read port: " << port_joint_position_.getName() << Logger::endl;
     return;
   }
 
   if (port_joint_velocity_.read(joint_velocity_) != RTT::NewData) {
     RTT::Logger::In in("JointLimitAvoidance::updateHook");
     error();
-    RTT::log(RTT::Error) << "could not read port: " << port_joint_velocity_.getName() << RTT::endlog();
+    Logger::log() << Logger::Error << "could not read port: " << port_joint_velocity_.getName() << Logger::endl;
     return;
   }
 
@@ -140,7 +142,7 @@ void JointLimitAvoidance<DOFS>::updateHook() {
     if (!limit_ok) {
         RTT::Logger::In in("JointLimitAvoidance::updateHook");
         error();
-        RTT::log(RTT::Error) << "joint " << i << " position in not within limits: " << joint_position_(i) << RTT::endlog();
+        Logger::log() << Logger::Error << "joint " << i << " position in not within limits: " << joint_position_(i) << Logger::endl;
         return;
     }
     joint_torque_command_(i) = jointLimitTrq(up_limit,
@@ -156,7 +158,7 @@ void JointLimitAvoidance<DOFS>::updateHook() {
   if (port_mass_matrix_.read(m_) != RTT::NewData) {
     RTT::Logger::In in("JointLimitAvoidance::updateHook");
     error();
-    RTT::log(RTT::Error) << "could not read port: " << port_mass_matrix_.getName() << RTT::endlog();
+    Logger::log() << Logger::Error << "could not read port: " << port_mass_matrix_.getName() << Logger::endl;
     return;
   }
 

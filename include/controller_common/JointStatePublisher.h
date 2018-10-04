@@ -43,6 +43,8 @@
 
 #include "sensor_msgs/JointState.h"
 
+using namespace RTT;
+
 template <unsigned DOFS>
 class JointStatePublisher : public RTT::TaskContext
 {
@@ -98,24 +100,24 @@ bool JointStatePublisher<DOFS>::configureHook() {
 
   names_ = joint_names_prop.get();
   if (names_.empty()) {
-    RTT::log(RTT::Error) << "ROS param joint_names is empty"
-                         << RTT::endlog();
+    Logger::log() << Logger::Error << "ROS param joint_names is empty"
+                         << Logger::endl;
     return false;
   }
 
   if (DOFS != names_.size()) {
-    RTT::log(RTT::Error) << "ROS param joint_names has wrong size:"
+    Logger::log() << Logger::Error << "ROS param joint_names has wrong size:"
                          << names_.size() << ", expected: "
-                         << DOFS << RTT::endlog();
+                         << DOFS << Logger::endl;
     return false;
   }
 
   constant_names_ = constant_names_prop.get();
   constant_positions_ = constant_positions_prop.get();
   if (constant_names_.size() != constant_positions_.size()) {
-    RTT::log(RTT::Error) << "ROS param constant_names should have the same size as constant_positions"
+    Logger::log() << Logger::Error << "ROS param constant_names should have the same size as constant_positions"
                          << constant_names_.size() << "!=" << constant_positions_.size()
-                         << RTT::endlog();
+                         << Logger::endl;
     return false;
   }
 

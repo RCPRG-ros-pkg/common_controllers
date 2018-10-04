@@ -17,6 +17,8 @@
 
 #include "controller_common/robot.h"
 
+using namespace RTT;
+
 template <unsigned DOFS, unsigned EFFECTORS>
 class RobotMassMatrix: public RTT::TaskContext {
  public:
@@ -56,8 +58,8 @@ template <unsigned DOFS, unsigned EFFECTORS>
 bool RobotMassMatrix<DOFS, EFFECTORS>::configureHook() {
   robot_ = this->getProvider<controller_common::Robot<DOFS, EFFECTORS> >("robot");
   if (!robot_) {
-    RTT::log(RTT::Error) << "Unable to load RobotService"
-                         << RTT::endlog();
+    Logger::log() << Logger::Error << "Unable to load RobotService"
+                         << Logger::endl;
     return false;
   }
 
@@ -72,9 +74,9 @@ void RobotMassMatrix<DOFS, EFFECTORS>::updateHook() {
   port_joint_position_.read(joint_position_);
 
   if (joint_position_.size() != DOFS) {
-    RTT::log(RTT::Error) << "Received joint position vector have invalid size. [read: "
+    Logger::log() << Logger::Error << "Received joint position vector have invalid size. [read: "
                          << joint_position_.size() << " expected: " << DOFS
-                         << "]" << RTT::endlog();
+                         << "]" << Logger::endl;
     error();
     return;
   }

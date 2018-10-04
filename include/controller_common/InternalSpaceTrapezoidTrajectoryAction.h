@@ -250,18 +250,14 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::updateHook() {
   if (goal_active_ && cycles_ > 2) {
     if (port_generator_status_.read(genMsg) == RTT::NewData) {
       if(genMsg != trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::ACTIVE){
-        //std::cout<<genMsg<<std::endl;
       }
       if(genMsg == trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::SUCCESSFUL){
-        //std::cout<<"got SUCCESSFUL"<<std::endl;
         if (goalToleranceIsViolated(g)) {
-          //std::cout<<"GOAL_TOLERANCE_VIOLATED"<<std::endl;
           res.error_code =
               trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::GOAL_TOLERANCE_VIOLATED;
           activeGoal_.setAborted(res, "");
           goal_active_ = false;
         } else {
-          //std::cout<<"SUCCESSFUL"<<std::endl;
           res.error_code = trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::SUCCESSFUL;
           activeGoal_.setSucceeded(res, "");
           goal_active_ = false;
@@ -269,7 +265,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::updateHook() {
       } else if(genMsg == trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::ACTIVE){
         ros::Time now = rtt_rosclock::host_now();
         // fealing feedback msg
-        //std::cout<<"sending feedback"<<std::endl;
         for (int i = 0; i < TRAJECTORY_TYPE::DOFS; i++) {
           feedback_.actual.positions[i] = joint_position_[i];
           feedback_.desired.positions[i] = desired_joint_position_[i];
@@ -284,7 +279,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::updateHook() {
         goal_active_ = false;
       }
     } else {
-      //std::cout<<"no data from generator"<<std::endl;
       res.error_code = trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::INACTIVE;
       activeGoal_.setAborted(res, "");
       goal_active_ = false;
@@ -294,7 +288,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::updateHook() {
 
 template <class TRAJECTORY_TYPE >
 void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle gh) {
-  //std::cout<<"deof: "<<TRAJECTORY_TYPE::DOFS<<std::endl;
   if (!goal_active_) {
     trajectory_msgs::JointTrajectory* trj_ptr =
         new trajectory_msgs::JointTrajectory;
@@ -322,7 +315,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle 
       goal_active_ = false;
       return;
     }
-    //std::cout<<"filled remap table"<<std::endl;
     // Sprawdzenie ograniczeń w jointach INVALID_GOAL
     if(trajectoryHasInvalidPoints(g)){
       res.error_code = trapezoid_trajectory_msgs::TrapezoidTrajectoryResult::INVALID_GOAL;
@@ -330,7 +322,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle 
       goal_active_ = false;
       return;
     }
-    //std::cout<<"trajectory has no invalid points"<<std::endl;
     // Remap joints
     /*if(!remapJointsAndLimits(trj_ptr, g, max_vel, max_acc)){
       res.error_code = trapezoid_trajectory_msgs::
@@ -370,7 +361,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle 
 
     if (getPeersReady()) {
       TRAJECTORY_TYPE trj_cptr = TRAJECTORY_TYPE();
-      //std::cout<<"got peers ready"<<std::endl;
       trj_cptr.start = g->trajectory.header.stamp;
       trj_cptr.count_trj = g->trajectory.points.size();
       for (unsigned int i = 0; i < g->trajectory.points.size(); i++) {
@@ -413,7 +403,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle 
         trj_cptr.stiffness[j] = stiffness_(j);
       }
       port_jnt_command_out_.write(trj_cptr);
-      ////std::cout<<"send data to generator"<<std::endl;
       gh.setAccepted();
       goal_active_ = true;
       cycles_ = 0;
@@ -424,7 +413,6 @@ void InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::goalCB(GoalHandle 
   } else {
     gh.setRejected();
   }
-  //std::cout<<"finished goal pocessing"<<std::endl;
 }
 
 template <class TRAJECTORY_TYPE >
@@ -446,15 +434,6 @@ bool InternalSpaceTrapezoidTrajectoryAction<TRAJECTORY_TYPE>::pathToleranceBreac
       if (jointNames_[j] == g->path_tolerance[i].name) {
         if (fabs(joint_position_[j] - desired_joint_position_[j])
             > g->path_tolerance[i].position) {
-          /*std::cout<<"Path tolerance violated with oint_position_="
-                  <<joint_position_[j]
-                  <<" desired_joint_position_="
-                  <<desired_joint_position_[j]
-                  <<" fabs="
-                  <<fabs(joint_position_[j] - desired_joint_position_[j])
-                  <<"tolerance= "
-                  <<g->path_tolerance[i]
-                  <<std::endl;*/
           RTT::Logger::log(RTT::Logger::Error) << "Path tolerance violated"
               << RTT::endlog();
           return true;

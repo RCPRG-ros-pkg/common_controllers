@@ -18,6 +18,8 @@
 
 #include "controller_common/robot.h"
 
+using namespace RTT;
+
 template <unsigned DOFS, unsigned EFFECTORS>
 class MassTest: public RTT::TaskContext {
  public:
@@ -66,20 +68,20 @@ bool MassTest<DOFS, EFFECTORS>::configureHook() {
 
   robot_ = this->getProvider<controller_common::Robot<DOFS, EFFECTORS> >("robot");
   if (!robot_) {
-    RTT::log(RTT::Error) << "Unable to load RobotService"
-                         << RTT::endlog();
+    Logger::log() << Logger::Error << "Unable to load RobotService"
+                         << Logger::endl;
     return false;
   }
 
   if (robot_->dofs() != DOFS) {
-    RTT::log(RTT::Error) << "wrong number of DOFs: " << robot_->dofs()
-                         << ", expected " << DOFS << RTT::endlog();
+    Logger::log() << Logger::Error << "wrong number of DOFs: " << robot_->dofs()
+                         << ", expected " << DOFS << Logger::endl;
     return false;
   }
 
   if (robot_->effectors() != EFFECTORS) {
-    RTT::log(RTT::Error) << "wrong number of effectors: " << robot_->effectors()
-                         << ", expected " << EFFECTORS << RTT::endlog();
+    Logger::log() << Logger::Error << "wrong number of effectors: " << robot_->effectors()
+                         << ", expected " << EFFECTORS << Logger::endl;
     return false;
   }
 
@@ -94,9 +96,9 @@ void MassTest<DOFS, EFFECTORS>::updateHook() {
 
   if (joint_position_.size() != DOFS) {
     RTT::Logger::In in("MassTest::updateHook");
-    RTT::log(RTT::Error) << "Received joint position vector have invalid size. [read: "
+    Logger::log() << Logger::Error << "Received joint position vector have invalid size. [read: "
                          << joint_position_.size() << " expected: " << DOFS
-                         << "]" << RTT::endlog();
+                         << "]" << Logger::endl;
     error();
     return;
   }
@@ -109,37 +111,37 @@ void MassTest<DOFS, EFFECTORS>::updateHook() {
 
   if (port_mass_matrix_left_.read(Ml_) != RTT::NewData) {
     RTT::Logger::In in("MassTest::updateHook");
-    RTT::log(RTT::Error) << "could not receive data on port "
+    Logger::log() << Logger::Error << "could not receive data on port "
                          << port_mass_matrix_left_.getName()
-                         << RTT::endlog();
+                         << Logger::endl;
     error();
     return;
   }
   if (Ml_.rows() != 7 || Ml_.cols() != 7) {
     RTT::Logger::In in("MassTest::updateHook");
-    RTT::log(RTT::Error) << "invalid size of data received on port "
+    Logger::log() << Logger::Error << "invalid size of data received on port "
                          << port_mass_matrix_left_.getName()
                          << ": " << Ml_.rows() << " " << Ml_.cols()
-                         << RTT::endlog();
+                         << Logger::endl;
     error();
     return;
   }
 
   if (port_mass_matrix_right_.read(Mr_) != RTT::NewData) {
     RTT::Logger::In in("MassTest::updateHook");
-    RTT::log(RTT::Error) << "could not receive data on port "
+    Logger::log() << Logger::Error << "could not receive data on port "
                          << port_mass_matrix_left_.getName()
-                         << RTT::endlog();
+                         << Logger::endl;
     error();
     return;
   }
 
   if (Mr_.rows() != 7 || Mr_.cols() != 7) {
     RTT::Logger::In in("MassTest::updateHook");
-    RTT::log(RTT::Error) << "invalid size of data received on port "
+    Logger::log() << Logger::Error << "invalid size of data received on port "
                          << port_mass_matrix_right_.getName()
                          << ": " << Mr_.rows() << " " << Mr_.cols()
-                         << RTT::endlog();
+                         << Logger::endl;
     error();
     return;
   }

@@ -163,8 +163,6 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   }
 
   if (port_joint_stiffness_command_.read(k_) != RTT::NewData) {
-    std::cout<<k_<<std::endl;
-    std::cout<<"No stiffness"<<std::endl;
     error();
     Logger::In in("JointImpedance::updateHook");
     Logger::log() << Logger::Error << "no data on port "
@@ -212,7 +210,7 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   if (!joint_torque_command_.allFinite()) {
     RTT::Logger::In in("JointImpedance::updateHook");
     error();
-    RTT::log(RTT::Error) << "Non finite output form stiffness" << Logger::endl;
+    Logger::log() << Logger::Error << "Non finite output form stiffness" << Logger::endl;
   }
 
   joint_torque_command_.noalias() -= d_ * joint_velocity_;
@@ -220,7 +218,7 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   if (!joint_torque_command_.allFinite()) {
     RTT::Logger::In in("JointImpedance::updateHook");
     error();
-    RTT::log(RTT::Error) << "Non finite output form damping" << Logger::endl;
+    Logger::log() << Logger::Error << "Non finite output form damping" << Logger::endl;
   }
 
   joint_torque_command_.noalias() += nullspace_torque_command_;
@@ -228,7 +226,7 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   if (!joint_torque_command_.allFinite()) {
     RTT::Logger::In in("JointImpedance::updateHook");
     error();
-    RTT::log(RTT::Error) << "Non finite output form nullspace" << Logger::endl;
+    Logger::log() << Logger::Error << "Non finite output form nullspace" << Logger::endl;
   }
 
   port_joint_torque_command_.write(joint_torque_command_);

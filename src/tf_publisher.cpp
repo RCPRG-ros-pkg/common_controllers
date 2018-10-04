@@ -38,6 +38,8 @@
 
 #include "rtt_rosclock/rtt_rosclock.h"
 
+using namespace RTT;
+
 TfPublisher::TfPublisher(const std::string& name)
     : RTT::TaskContext(name, PreOperational),
       N_(0) {
@@ -51,16 +53,16 @@ TfPublisher::~TfPublisher() {
 
 bool TfPublisher::configureHook() {
   if (frame_ids_.size() != child_frame_ids_.size()) {
-    RTT::log(RTT::Error) << "Wrong size of input vectors"
-                         << RTT::endlog();
+    Logger::log() << Logger::Error << "Wrong size of input vectors"
+                         << Logger::endl;
     return false;
   }
 
   N_ = frame_ids_.size();
 
   if (N_ == 0) {
-    RTT::log(RTT::Error) << "Input vectors is null"
-                         << RTT::endlog();
+    Logger::log() << Logger::Error << "Input vectors is null"
+                         << Logger::endl;
     return false;
   }
 

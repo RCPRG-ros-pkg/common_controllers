@@ -92,27 +92,11 @@ void PoseTransform::updateHook() {
 
   if (port_primary_target_pose_.read(primary_target_pose_) == RTT::NewData) {
     primary_target_status = pose_new;
-    /*std::cout << "PT: p: ";
-     std::cout << primary_target_pose_.position.x << " ";
-     std::cout << primary_target_pose_.position.y << " ";
-     std::cout << primary_target_pose_.position.z << " o: ";
-     std::cout << primary_target_pose_.orientation.x << " ";
-     std::cout << primary_target_pose_.orientation.y << " ";
-     std::cout << primary_target_pose_.orientation.z << " ";
-     std::cout << primary_target_pose_.orientation.w << std::endl;*/
     tf::poseMsgToKDL(primary_target_pose_, primary_target);
   }
 
   if (port_target_pass_through_pose_.read(target_pass_through_pose_) == RTT::NewData) {
     target_pass_through_status = pose_new;
-    /*std::cout << "PT: p: ";
-     std::cout << primary_target_pose_.position.x << " ";
-     std::cout << primary_target_pose_.position.y << " ";
-     std::cout << primary_target_pose_.position.z << " o: ";
-     std::cout << primary_target_pose_.orientation.x << " ";
-     std::cout << primary_target_pose_.orientation.y << " ";
-     std::cout << primary_target_pose_.orientation.z << " ";
-     std::cout << primary_target_pose_.orientation.w << std::endl;*/
   }
 
   // On any change of primary_frame or primary_target or target_pass_through
@@ -133,14 +117,6 @@ void PoseTransform::updateHook() {
     } else {
       secondary_target_pose_ = target_pass_through_pose_;
     }
-    /*std::cout << "ST: p: ";
-     std::cout << secondary_target_pose_.position.x << " ";
-     std::cout << secondary_target_pose_.position.y << " ";
-     std::cout << secondary_target_pose_.position.z << " o: ";
-     std::cout << secondary_target_pose_.orientation.x << " ";
-     std::cout << secondary_target_pose_.orientation.y << " ";
-     std::cout << secondary_target_pose_.orientation.z << " ";
-     std::cout << secondary_target_pose_.orientation.w << std::endl << std::endl;*/
     port_secondary_target_pose_.write(secondary_target_pose_);
   }
 }

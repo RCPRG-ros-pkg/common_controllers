@@ -28,6 +28,8 @@
 
 #include "eigen_conversions/eigen_msg.h"
 
+using namespace RTT;
+
 template <unsigned DOFS, unsigned EFFECTORS>
 class CartesianImpedance: public RTT::TaskContext {
  public:
@@ -135,20 +137,20 @@ template <unsigned DOFS, unsigned EFFECTORS>
 
     robot_ = this->getProvider<Robot>("robot");
     if (!robot_) {
-      RTT::log(RTT::Error) << "Unable to load RobotService"
-                           << RTT::endlog();
+      Logger::log() << Logger::Error << "Unable to load RobotService"
+                           << Logger::endl;
       return false;
     }
 
     if (robot_->dofs() != DOFS) {
-      RTT::log(RTT::Error) << "wrong number of DOFs: " << robot_->dofs()
-                           << ", expected " << DOFS << RTT::endlog();
+      Logger::log() << Logger::Error << "wrong number of DOFs: " << robot_->dofs()
+                           << ", expected " << DOFS << Logger::endl;
       return false;
     }
 
     if (robot_->effectors() != EFFECTORS) {
-      RTT::log(RTT::Error) << "wrong number of effectors: " << robot_->effectors()
-                           << ", expected " << EFFECTORS << RTT::endlog();
+      Logger::log() << Logger::Error << "wrong number of effectors: " << robot_->effectors()
+                           << ", expected " << EFFECTORS << Logger::endl;
       return false;
     }
 
@@ -270,7 +272,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
         else {
           RTT::Logger::In in("CartesianImpedance::updateHook");
           error();
-          RTT::log(RTT::Error) << "could not read port \'" << port_tool_position_command_[i]->getName() << "\'" << RTT::endlog();
+          Logger::log() << Logger::Error << "could not read port \'" << port_tool_position_command_[i]->getName() << "\'" << Logger::endl;
           return;
         }
       }
@@ -285,7 +287,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
         }
       } else {
         error();
-        RTT::log(RTT::Error) << "could not read tool position command" << RTT::endlog();
+        Logger::log() << Logger::Error << "could not read tool position command" << Logger::endl;
         return;
       }
 */
@@ -300,14 +302,14 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (port_joint_position_.read(joint_position_) != RTT::NewData) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "could not read port \'" << port_joint_position_.getName() << "\'" << RTT::endlog();
+        Logger::log() << Logger::Error << "could not read port \'" << port_joint_position_.getName() << "\'" << Logger::endl;
         return;
     }
 
     if (!joint_position_.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "joint_position_ contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "joint_position_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -315,7 +317,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!joint_velocity_.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "joint_velocity_ contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "joint_velocity_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -323,7 +325,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!nullspace_torque_command_.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "nullspace_torque_command_ contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "nullspace_torque_command_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -366,14 +368,14 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (port_mass_matrix_inv_.read(M) != RTT::NewData) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "could not read port \'" << port_mass_matrix_inv_.getName() << "\'" << RTT::endlog();
+        Logger::log() << Logger::Error << "could not read port \'" << port_mass_matrix_inv_.getName() << "\'" << Logger::endl;
         return;
     }
 
     if (!M.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "M contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "M contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -383,7 +385,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!J.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "J contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "J contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -396,7 +398,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!Mi.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "Mi contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "Mi contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -422,7 +424,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!joint_torque_command_.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "joint_torque_command_ contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "joint_torque_command_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -453,7 +455,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!F.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "F contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "F contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -491,7 +493,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
     if (!P.allFinite()) {
         RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        RTT::log(RTT::Error) << "P contains NaN or inf" << RTT::endlog();
+        Logger::log() << Logger::Error << "P contains NaN or inf" << Logger::endl;
         return;
     }
 

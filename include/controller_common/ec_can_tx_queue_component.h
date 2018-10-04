@@ -34,6 +34,8 @@
 
 #include "ec_can_queue.h"
 
+using namespace RTT;
+
 namespace controller_common {
 
 namespace ec_can_queue {
@@ -86,12 +88,9 @@ public:
                 while (port_tx_in_.read(fr) == RTT::NewData) {
                     if (msgs_count >= N_FRAMES) {
                         RTT::Logger::In in("CanQueueTxComponent::updateHook");
-                        RTT::log(RTT::Error) << "queue is overloaded" << RTT::endlog();
+                        Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
                         break;
                     }
-//                    if (msgs_count == 0) {
-//                        std::cout << "    fr.id: " << fr.id << ", fr.dlc: " << fr.dlc << std::endl;
-//                    }
                     serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10);
                     ++msgs_count;
                 }
@@ -120,17 +119,14 @@ public:
                         *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = rxCount_prev_;
                     }
                 }
-                //std::cout << getName() << ": txCount(r/s): " << txCount << " / " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0)) << "  rxCount(r/s): " << rxCount << " / " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2)) << "  size: " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4)) << std::endl;
             }
             else {
 //                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
-                //std::cout << getName() << ": could not send tx queue txCount(r/s): " << txCount << " / " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0)) << "  rxCount(s): " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2)) << "  size: " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4)) << std::endl;
             }
 
         }
         else {
 //            *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
-            //std::cout << getName() << ": could not receive rx queue txCount(s): " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0)) << "  rxCount(s): " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2)) << "  size: " << (*reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4)) << std::endl;
         }
 
         port_tx_queue_out_.write(tx_queue_out_);
