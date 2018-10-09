@@ -51,9 +51,13 @@ public:
             : controller_common::CanQueueService(owner)
             , port_rx_queue_in_("rx_queue_INPORT")
             , read_frames_count_(0)
+            , read_frames_ptr_(0)
             , port_tx_out_("tx_OUTPORT")
             , rxCounter_prev_(0)
     {
+        for (int i = 0; i < QUEUE_LENGTH; ++i) {
+            read_frames_valid_[i] = false;
+        }
         owner->ports()->addPort(port_rx_queue_in_);
         owner->ports()->addPort(port_tx_out_);
         can_frame fr;
@@ -92,11 +96,11 @@ public:
             Logger::log() << Logger::Error << "wrong frames read count: " << count << Logger::endl;
             return false;
         }
-        if (read_frames_count_ >= N_FRAMES*5) {
-            RTT::Logger::In in("EcCanQueue::readReply");
-            Logger::log() << Logger::Error << "wrong frames total count: " << read_frames_count_ << Logger::endl;
-            return false;
-        }
+//        if (read_frames_count_ >= QUEUE_LENGTH) {
+//            RTT::Logger::In in("EcCanQueue::readReply");
+//            Logger::log() << Logger::Error << "wrong frames total count: " << read_frames_count_ << Logger::endl;
+//            return false;
+//        }
         for (uint16_t i = 0; i < count; ++i) {
             can_frame fr;
             if (!deserialize(rx_queue_in_.data() + 6 + i * 10, fr)) {
@@ -106,7 +110,7 @@ public:
             }
         }
         for (uint16_t i = 0; i < count; ++i) {
-            if (!deserialize(rx_queue_in_.data() + 6 + i * 10, read_frames_[read_frames_count_])) {
+            if (!deserialize(rx_queue_in_.data() + 6 + i * 10, read_frames_[read_frames_ptr_])) {
                 RTT::Logger::In in("EcCanQueue::readReply");
                 Logger::log() << Logger::Error << "could not deserialize CAN frame: " << Logger::endl;
                 return false;
@@ -116,15 +120,16 @@ public:
                 match = true;
             }
             for (int j = 0; j < filters_.size(); ++j) {
-                if ((read_frames_[read_frames_count_].id & filters_[j].second) == (filters_[j].first & filters_[j].second)) {
+                if ((read_frames_[read_frames_ptr_].id & filters_[j].second) == (filters_[j].first & filters_[j].second)) {
                     match = true;
                     break;
                 }
             }
             if (match) {
-                ++read_frames_count_;
-                if (read_frames_count_ >= N_FRAMES*5) {
-                    break;
+                read_frames_valid_[read_frames_ptr_] = true;
+                read_frames_ptr_ = (read_frames_ptr_+1) % QUEUE_LENGTH;
+                if (read_frames_count_ < QUEUE_LENGTH) {
+                    ++read_frames_count_;
                 }
             }
         }
@@ -180,17 +185,20 @@ public:
             }
         }
 */
+
         for (uint16_t i = 0; i < read_frames_count_; ++i) {
-            if (read_frames_[i].id == can_id) {
-                dlc = read_frames_[i].dlc;
+            int ptr = (read_frames_ptr_ + 2*QUEUE_LENGTH - read_frames_count_ - 1 + i) % QUEUE_LENGTH;
+            if (read_frames_[ptr].id == can_id && read_frames_valid_[ptr]) {
+                dlc = read_frames_[ptr].dlc;
                 for (uint16_t j = 0; j < dlc; ++j) {
-                    data_out[j] = read_frames_[i].data[j];
+                    data_out[j] = read_frames_[ptr].data[j];
                 }
-                // erase
-                for (uint16_t j = i + 1; j < read_frames_count_; ++j) {
-                    read_frames_[j-1] = read_frames_[j];
-                }
-                --read_frames_count_;
+                read_frames_valid_[ptr] = false;
+//                // erase
+//                for (uint16_t j = i + 1; j < read_frames_count_; ++j) {
+//                    read_frames_[j-1] = read_frames_[j];
+//                }
+//                --read_frames_count_;
                 return true;
             }
         }
@@ -212,8 +220,10 @@ private:
         return true;
     }
 
-    boost::array<can_frame, N_FRAMES*5 > read_frames_;
-    uint16_t read_frames_count_, rxCounter_prev_;
+    static const size_t QUEUE_LENGTH = N_FRAMES*5;
+    boost::array<can_frame, QUEUE_LENGTH > read_frames_;
+    boost::array<bool, QUEUE_LENGTH > read_frames_valid_;
+    int read_frames_count_, rxCounter_prev_, read_frames_ptr_;
     std::vector<std::pair<uint32_t, uint32_t > > filters_;
     RTT::InputPort<boost::array<int8_t, N_FRAMES*10+6 > > port_rx_queue_in_;
     boost::array<int8_t, N_FRAMES*10+6 > rx_queue_in_;

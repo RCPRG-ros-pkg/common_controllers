@@ -81,52 +81,47 @@ public:
                 txCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+0);
             }
 
-            if (txCount_prev_ == txCount) {
-                ++txCount_prev_;
+            if (txCount_prev_ != txCount) {
+                Logger::log() << Logger::Warning << "lost tx counter: " << txCount_prev_ << " " << txCount << Logger::endl;
+                txCount_prev_ = txCount;
+            }
+            ++txCount_prev_;
+            can_frame fr;
+            while (port_tx_in_.read(fr) == RTT::NewData) {
+                if (msgs_count >= N_FRAMES) {
+                    RTT::Logger::In in("CanQueueTxComponent::updateHook");
+                    Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
+                    break;
+                }
+                serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10);
+                ++msgs_count;
+            }
 
-                can_frame fr;
-                while (port_tx_in_.read(fr) == RTT::NewData) {
-                    if (msgs_count >= N_FRAMES) {
-                        RTT::Logger::In in("CanQueueTxComponent::updateHook");
-                        Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
-                        break;
-                    }
-                    serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10);
-                    ++msgs_count;
-                }
-//                if (msgs_count > 1) {
-//                    msgs_count = 1;
-//                }
+            *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
 
-                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
-
-                uint16_t rxCount;
-                if (invert_rx_tx_) {
-                    *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = txCount_prev_;
-                    rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+0);
-                }
-                else {
-                    *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = txCount_prev_;
-                    rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+2);
-                }
-                if (rxCount_prev_ != rxCount) {
-                    rxCount_prev_ = rxCount;
-                    //++rxCount_prev_;  // TODO: verify this on HW
-                    if (invert_rx_tx_) {
-                        *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = rxCount_prev_;
-                    }
-                    else {
-                        *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = rxCount_prev_;
-                    }
-                }
+            uint16_t rxCount;
+            if (invert_rx_tx_) {
+                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = txCount_prev_;
+                rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+0);
             }
             else {
-//                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
+                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = txCount_prev_;
+                rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+2);
             }
-
+            if (rxCount_prev_ != uint16_t(rxCount-1)) {
+                Logger::log() << Logger::Warning << "lost rx counter: " << rxCount_prev_ << " " << uint16_t(rxCount-1) << Logger::endl;
+                rxCount_prev_ = rxCount-1;
+            }
+            ++rxCount_prev_;  // TODO: verify this on HW
+            if (invert_rx_tx_) {
+                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = rxCount_prev_;
+            }
+            else {
+                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = rxCount_prev_;
+            }
         }
         else {
-//            *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
+            // do nothing
         }
 
         port_tx_queue_out_.write(tx_queue_out_);
