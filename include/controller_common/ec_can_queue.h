@@ -96,19 +96,6 @@ public:
             Logger::log() << Logger::Error << "wrong frames read count: " << count << Logger::endl;
             return false;
         }
-//        if (read_frames_count_ >= QUEUE_LENGTH) {
-//            RTT::Logger::In in("EcCanQueue::readReply");
-//            Logger::log() << Logger::Error << "wrong frames total count: " << read_frames_count_ << Logger::endl;
-//            return false;
-//        }
-        for (uint16_t i = 0; i < count; ++i) {
-            can_frame fr;
-            if (!deserialize(rx_queue_in_.data() + 6 + i * 10, fr)) {
-                RTT::Logger::In in("EcCanQueue::readReply");
-                Logger::log() << Logger::Error << "could not deserialize CAN frame: " << Logger::endl;
-                return false;
-            }
-        }
         for (uint16_t i = 0; i < count; ++i) {
             if (!deserialize(rx_queue_in_.data() + 6 + i * 10, read_frames_[read_frames_ptr_])) {
                 RTT::Logger::In in("EcCanQueue::readReply");

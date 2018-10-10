@@ -93,7 +93,11 @@ public:
                     Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
                     break;
                 }
-                serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10);
+                if (!serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10)) {
+                    RTT::Logger::In in("CanQueueTxComponent::updateHook");
+                    Logger::log() << Logger::Error << "could not serialize CAN frame" << Logger::endl;
+                    break;
+                }
                 ++msgs_count;
             }
 
