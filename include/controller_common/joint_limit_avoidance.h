@@ -74,7 +74,7 @@ JointLimitAvoidance<DOFS>::JointLimitAvoidance(const std::string& name) :
                          port_nullspace_torque_command_);
 
   for (int i = 0; i < DOFS; ++i) {
-    stringstream ss;
+    std::stringstream ss;
     ss << "limits_" << i;
     this->properties()->addProperty(ss.str(), limits_[i]);
   }
