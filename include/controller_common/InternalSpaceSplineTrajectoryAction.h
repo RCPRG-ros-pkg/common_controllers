@@ -345,6 +345,10 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
       }
 
       jnt_command_out_.trj[i].time_from_start = g->trajectory.points[i].time_from_start;
+
+      if (g->trajectory.points[i].velocities.size() == g->trajectory.points[i].positions.size()) {
+        jnt_command_out_.trj[i].use_velocities = true;
+      }
     }
 
     // prepare tolerances data
