@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2017, Robot Control and Pattern Recognition Group, Warsaw University of Technology
  All rights reserved.
- 
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
      * Neither the name of the Warsaw University of Technology nor the
        names of its contributors may be used to endorse or promote products
        derived from this software without specific prior written permission.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,14 +35,15 @@ namespace controller_common {
 class CanQueueService: public RTT::Service {
  public:
   explicit CanQueueService(RTT::TaskContext* owner)
-        : RTT::Service("can_queue", owner) {
+        : RTT::Service("can_queue", owner)
+  {
     this->addOperation("initialize", &CanQueueService::initialize, this, RTT::ClientThread);
     this->addOperation("send", &CanQueueService::send, this, RTT::ClientThread);
     this->addOperation("readQueue", &CanQueueService::readQueue, this, RTT::ClientThread);
     this->addOperation("readReply", &CanQueueService::readReply, this, RTT::ClientThread);
   }
 
-  virtual void initialize(const std::string& dev_name, const std::vector<std::pair<uint32_t, uint32_t > >& filters) = 0;
+  virtual void initialize(const std::string& dev_name, const std::vector<std::pair<uint32_t, uint32_t>>& filters) = 0;
   virtual bool send(uint16_t can_id, uint16_t len, const int8_t *data) = 0;
   virtual bool readQueue() = 0;
   virtual bool readReply(uint16_t can_id, uint16_t &dlc, int8_t *data) = 0;

@@ -1,7 +1,7 @@
 /*
  Copyright (c) 2017, Robot Control and Pattern Recognition Group, Warsaw University of Technology
  All rights reserved.
- 
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
      * Neither the name of the Warsaw University of Technology nor the
        names of its contributors may be used to endorse or promote products
        derived from this software without specific prior written permission.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,19 +32,19 @@
 #include <rtt/Component.hpp>
 #include <rtt/Logger.hpp>
 
+#include <stdlib.h>
+
 #include "ec_can_queue.h"
 
 using namespace RTT;
 
 namespace controller_common {
-
 namespace ec_can_queue {
 
-template <size_t N_FRAMES >
-class CanQueueTxComponent: public RTT::TaskContext {
+class CanQueueTxComponent
+    :   public RTT::TaskContext {
 public:
-
-    explicit CanQueueTxComponent(const std::string &name) 
+    explicit CanQueueTxComponent(const std::string &name)
         : TaskContext(name)
         , port_tx_in_("tx_INPORT")
         , port_rx_queue_in_("rx_queue_INPORT")
@@ -66,26 +66,36 @@ public:
     }
 
     bool startHook() {
+        //printf("ec_can_tx_queue_component invert_rx_tx_: %d\n", (int)invert_rx_tx_);
         return true;
     }
 
-    void updateHook() {
+    void handleRxData()
+    {
+        const auto rxdata = rx_queue_in_.data();
+
+        uint16_t rxCount;
+        uint16_t txCount;
+        if (invert_rx_tx_) {
+            txCount = *(uint16_t*)(rxdata + 2);
+            rxCount = *(uint16_t*)(rxdata + 0);
+        }
+        else {
+            txCount = *(uint16_t*)(rxdata + 0);
+            rxCount = *(uint16_t*)(rxdata + 2);
+        }
+
+        if (rxCount != rxCount_prev_) {
+            // new data arrived
+            rxCount_prev_ = rxCount;
+            // TODO: read new data
+        }
+
+        auto txdata = tx_queue_out_.data();
+
         int msgs_count = 0;
-
-        if (port_rx_queue_in_.read(rx_queue_in_) == RTT::NewData) {
-            uint16_t txCount;
-            if (invert_rx_tx_) {
-                txCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+2);
-            }
-            else {
-                txCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+0);
-            }
-
-            if (txCount_prev_ != txCount) {
-                Logger::log() << Logger::Warning << "lost tx counter: " << txCount_prev_ << " " << txCount << Logger::endl;
-                txCount_prev_ = txCount;
-            }
-            ++txCount_prev_;
+        if (txCount_prev_ == txCount) {
+            // If we are here, it means that CAN is ready to get new data from us
             can_frame fr;
             while (port_tx_in_.read(fr) == RTT::NewData) {
                 if (msgs_count >= N_FRAMES) {
@@ -93,40 +103,40 @@ public:
                     Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
                     break;
                 }
-                if (!serialize(fr, tx_queue_out_.data() + 6 + msgs_count * 10)) {
+
+                if (!serialize(fr, txdata + 6 + msgs_count*10)) {
                     RTT::Logger::In in("CanQueueTxComponent::updateHook");
                     Logger::log() << Logger::Error << "could not serialize CAN frame" << Logger::endl;
                     break;
                 }
+
                 ++msgs_count;
             }
 
-            *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+4) = msgs_count;
+            if (msgs_count > 0) {
+                ++txCount_prev_;
+            }
+        }
 
-            uint16_t rxCount;
-            if (invert_rx_tx_) {
-                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = txCount_prev_;
-                rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+0);
-            }
-            else {
-                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = txCount_prev_;
-                rxCount = *reinterpret_cast<uint16_t* >(rx_queue_in_.data()+2);
-            }
-            if (rxCount_prev_ != uint16_t(rxCount-1)) {
-                Logger::log() << Logger::Warning << "lost rx counter: " << rxCount_prev_ << " " << uint16_t(rxCount-1) << Logger::endl;
-                rxCount_prev_ = rxCount-1;
-            }
-            ++rxCount_prev_;  // TODO: verify this on HW
-            if (invert_rx_tx_) {
-                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+0) = rxCount_prev_;
-            }
-            else {
-                *reinterpret_cast<uint16_t* >(tx_queue_out_.data()+2) = rxCount_prev_;
-            }
+        if (invert_rx_tx_) {
+            *(uint16_t*)(txdata + 2) = txCount_prev_;
+            *(uint16_t*)(txdata + 0) = rxCount_prev_;
         }
         else {
-            // do nothing
+            *(uint16_t*)(txdata + 0) = txCount_prev_;
+            *(uint16_t*)(txdata + 2) = rxCount_prev_;
         }
+
+        *(uint16_t*)(txdata + 4) = msgs_count;
+        if (msgs_count > 0) {
+//            printf("! ec_can_tx_queue_component msgs_count: %d tx: %u r_tx: %u rx: %u r_rx: %u, %d %d %d %d %d %d %d\n", msgs_count, txCount_prev_, txCount, rxCount_prev_, rxCount, (int)tx_queue_out_.data()[0], (int)tx_queue_out_.data()[1], (int)tx_queue_out_.data()[2], (int)tx_queue_out_.data()[3], (int)tx_queue_out_.data()[4], (int)tx_queue_out_.data()[5], (int)tx_queue_out_.data()[6]);
+        }
+    }
+
+    void updateHook() {
+        if (port_rx_queue_in_.read(rx_queue_in_) == RTT::NewData) 
+        {}
+        handleRxData();
 
         port_tx_queue_out_.write(tx_queue_out_);
     }
@@ -136,28 +146,28 @@ private:
         if (frame.dlc > 8) {
             return false;
         }
-        uint8_t *uptr = reinterpret_cast<uint8_t* >(ptr);
-        uptr[0] = (frame.id>>3)&0xFF;
-        uptr[1] = ((frame.id&0x07)<<5) | (frame.dlc&0x0F);
+
+        auto uptr = (uint8_t*)(ptr);
+        uptr[1] = (frame.id >> 3) & 0xFF;
+        uptr[0] = ((frame.id & 0x07) << 5) | (frame.dlc & 0x0F);
         for (int i = 0; i < frame.dlc; ++i) {
             ptr[i + 2] = frame.data[i];
         }
+
         return true;
     }
 
-    RTT::InputPort<can_frame > port_tx_in_;
-    RTT::InputPort<boost::array<int8_t, N_FRAMES*10+6 > > port_rx_queue_in_;
-    RTT::OutputPort<boost::array<int8_t, N_FRAMES*10+6 > > port_tx_queue_out_;
-    boost::array<int8_t, N_FRAMES*10+6 > rx_queue_in_;
-    boost::array<int8_t, N_FRAMES*10+6 > tx_queue_out_;
+    RTT::InputPort<can_frame> port_tx_in_;
+    RTT::InputPort<boost::array<int8_t, N_FRAMES*10+6>> port_rx_queue_in_;
+    RTT::OutputPort<boost::array<int8_t, N_FRAMES*10+6>> port_tx_queue_out_;
     uint16_t rxCount_prev_;
     uint16_t txCount_prev_;
     bool invert_rx_tx_;
+    boost::array<int8_t, N_FRAMES*10+6> rx_queue_in_;
+    boost::array<int8_t, N_FRAMES*10+6> tx_queue_out_;
 };
 
 }   // namespace ec_can_queue
-
 }   // namespace controller_common
 
 #endif  // CONTROLLER_COMMON_EC_CAN_TX_QUEUE_COMPONENT_H__
-
