@@ -63,14 +63,9 @@ public:
     explicit EcCanQueue(RTT::TaskContext* owner)
         :   controller_common::CanQueueService(owner)
         ,   port_rx_queue_in_("rx_queue_INPORT")
-        ,   read_frames_count_(0)
-        ,   read_frames_ptr_(0)
+        ,   frames_count_(0)
         ,   port_tx_out_("tx_OUTPORT")
     {
-        for (int i = 0; i < QUEUE_LENGTH; ++i) {
-            read_frames_valid_[i] = false;
-        }
-
         owner->ports()->addPort(port_rx_queue_in_);
         owner->ports()->addPort(port_tx_out_);
 
@@ -112,8 +107,9 @@ public:
             return false;
         }
 
+        can_frame frame;
         for (uint16_t i = 0; i < msgcount; ++i) {
-            if (!deserialize(rxdata + 6 + i * 10, read_frames_[read_frames_ptr_])) {
+            if (!deserialize(rxdata + 6 + i * 10, frame)) {
                 RTT::Logger::In in("EcCanQueue::readQueue");
                 Logger::log() << Logger::Error << "could not deserialize CAN frame: " << Logger::endl;
                 return false;
@@ -125,7 +121,7 @@ public:
             }
 
             for (int j = 0; j < filters_.size(); ++j) {
-                if ((read_frames_[read_frames_ptr_].id & filters_[j].second)
+                if ((frame.id & filters_[j].second)
                     == (filters_[j].first & filters_[j].second))
                 {
                     match = true;
@@ -134,10 +130,14 @@ public:
             }
 
             if (match) {
-                read_frames_valid_[read_frames_ptr_] = true;
-                read_frames_ptr_ = (read_frames_ptr_+1) % QUEUE_LENGTH;
-                if (read_frames_count_ < QUEUE_LENGTH) {
-                    ++read_frames_count_;
+                // Add the frame
+                // Move all older frames by 1 up
+                for (int frame_idx = ((frames_count_==QUEUE_LENGTH) ? QUEUE_LENGTH-1 : frames_count_); frame_idx >= 1; --frame_idx) {
+                    frames_[frame_idx] = frames_[frame_idx-1];
+                }
+                frames_[0] = frame;
+                if (frames_count_ < QUEUE_LENGTH) {
+                    ++frames_count_;
                 }
             }
         }
@@ -149,35 +149,34 @@ public:
 #ifdef DBG_PRINT_BUFFER_LOAD
         // one in tousand reads, print queue length
         if ((dbg_counter_ % 1000) == 0) {
-            int frames_count = 0;
-            for (uint16_t i = 0; i < QUEUE_LENGTH; ++i) {
-                // Search for the oldest matching frame
-                int frame_idx = (read_frames_ptr_ + i) % QUEUE_LENGTH;;
-                if (read_frames_valid_[frame_idx] == false) {
-                    continue;
-                }
-                frames_count++;
-            }
-            // TODO: remove this:
-            printf("%d: frames count: %d\n", dbg_id_, frames_count);
+            printf("%d: frames count: %d\n", dbg_id_, frames_count_);
         }
         dbg_counter_++;
 #endif  // DBG_PRINT_BUFFER_LOAD
-        for (uint16_t i = 0; i < QUEUE_LENGTH; ++i) {
-            // Search for the oldest matching frame
-            int frame_idx = (read_frames_ptr_ + i) % QUEUE_LENGTH;;
-            if (read_frames_valid_[frame_idx] == false) {
-                continue;
+
+        // Get the oldest matching frame
+        int found_frame_idx = -1;
+        for (int frame_idx = frames_count_-1; frame_idx >= 0; --frame_idx) {
+            if (frames_[frame_idx].id == can_id) {
+                found_frame_idx = frame_idx;
+                break;
+            }
+        }
+
+        if (found_frame_idx >= 0) {
+            dlc = frames_[found_frame_idx].dlc;
+            for (uint16_t j = 0; j < dlc; ++j) {
+                data_out[j] = frames_[found_frame_idx].data[j];
             }
 
-            if ((read_frames_[frame_idx].id == can_id) && read_frames_valid_[frame_idx]) {
-                dlc = read_frames_[frame_idx].dlc;
-                for (uint16_t j = 0; j < dlc; ++j) {
-                    data_out[j] = read_frames_[frame_idx].data[j];
-                }
-                read_frames_valid_[frame_idx] = false;
-                return true;
+            // Remove the frame
+            for (int frame_idx = found_frame_idx; frame_idx < frames_count_-1; ++frame_idx) {
+                frames_[frame_idx] = frames_[frame_idx+1];
             }
+            if (frames_count_ > 0) {
+                --frames_count_;
+            }
+            return true;
         }
 
         return false;
@@ -199,10 +198,10 @@ private:
         return true;
     }
 
+    boost::array<can_frame, QUEUE_LENGTH> frames_;
+    int frames_count_;
+
     RTT::InputPort<boost::array<int8_t, N_FRAMES*10+6>> port_rx_queue_in_;
-    boost::array<can_frame, QUEUE_LENGTH> read_frames_;
-    boost::array<bool, QUEUE_LENGTH> read_frames_valid_;
-    int read_frames_count_, read_frames_ptr_;
     std::vector<std::pair<uint32_t, uint32_t>> filters_;
     boost::array<int8_t, N_FRAMES*10+6> rx_queue_in_;
 
