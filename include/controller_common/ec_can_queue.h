@@ -149,7 +149,7 @@ public:
 #ifdef DBG_PRINT_BUFFER_LOAD
         // one in tousand reads, print queue length
         if ((dbg_counter_ % 1000) == 0) {
-            printf("%d: frames count: %d\n", dbg_id_, frames_count_);
+            printf("%s %d: frames count: %d\n", getName().c_str(), dbg_id_, frames_count_);
         }
         dbg_counter_++;
 #endif  // DBG_PRINT_BUFFER_LOAD
