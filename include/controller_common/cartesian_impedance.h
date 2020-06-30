@@ -244,19 +244,19 @@ template <unsigned DOFS, unsigned EFFECTORS>
 
     if (first_step_) {
       for (size_t i = 0; i < EFFECTORS; i++) {
-        Kc(i * 6 + 0) = 1;
-        Kc(i * 6 + 1) = 1;
+        Kc(i * 6 + 0) = 1500;
+        Kc(i * 6 + 1) = 1500;
         Kc(i * 6 + 2) = 1500;
         Kc(i * 6 + 3) = 150;
         Kc(i * 6 + 4) = 150;
         Kc(i * 6 + 5) = 150;
 
-        Dxi(i * 6 + 0) = 0.7;
-        Dxi(i * 6 + 1) = 0.7;
-        Dxi(i * 6 + 2) = 0.7;
-        Dxi(i * 6 + 3) = 0.7;
-        Dxi(i * 6 + 4) = 0.7;
-        Dxi(i * 6 + 5) = 0.7;
+        Dxi(i * 6 + 0) = 0.35;
+        Dxi(i * 6 + 1) = 0.35;
+        Dxi(i * 6 + 2) = 0.35;
+        Dxi(i * 6 + 3) = 0.35;
+        Dxi(i * 6 + 4) = 0.35;
+        Dxi(i * 6 + 5) = 0.35;
 
         geometry_msgs::Pose pos;
         if (port_tool_position_command_[i]->read(pos) == RTT::NewData) {

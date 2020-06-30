@@ -80,13 +80,13 @@ bool CartesianImpedanceInterpolator<TRAJECTORY_TYPE >::startHook() {
   setpoint_.stiffness.torque.y = 150;
   setpoint_.stiffness.torque.z = 150;
 
-  setpoint_.damping.force.x = 0.7;
-  setpoint_.damping.force.y = 0.7;
-  setpoint_.damping.force.z = 0.7;
+  setpoint_.damping.force.x = 0.35;
+  setpoint_.damping.force.y = 0.35;
+  setpoint_.damping.force.z = 0.35;
 
-  setpoint_.damping.torque.x = 0.7;
-  setpoint_.damping.torque.y = 0.7;
-  setpoint_.damping.torque.z = 0.7;
+  setpoint_.damping.torque.x = 0.35;
+  setpoint_.damping.torque.y = 0.35;
+  setpoint_.damping.torque.z = 0.35;
 
   last_point_not_set_ = false;
   trajectory_active_ = false;
