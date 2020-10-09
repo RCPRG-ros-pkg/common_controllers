@@ -11,16 +11,18 @@ find_package(catkin REQUIRED COMPONENTS
   kdl_conversions
   trajectory_msgs
   rtt_actionlib
+  kdl_parser
   )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(Eigen3 REQUIRED)
 find_package(orocos_kdl REQUIRED)
+find_package(urdfdom_headers REQUIRED)
 
 link_directories(${orocos_kdl_LIBRARY_DIRS})
 
-include_directories(${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
+include_directories(${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${urdfdom_headers_INCLUDE_DIRS})
 
 ### Orocos Dependencies ###
 # Note that orocos_use_package() does not need to be called for any dependency
@@ -46,7 +48,7 @@ target_link_libraries(controller_common ${catkin_LIBRARIES} ${USE_OROCOS_LIBRARI
 # Export package information (replaces catkin_package() macro) 
 orocos_generate_package(
   INCLUDE_DIRS include
-  DEPENDS rtt_ros geometry_msgs std_msgs message_runtime rtt_roscomm cartesian_trajectory_msgs trapezoid_trajectory_msgs trajectory_msgs rtt_actionlib
+  DEPENDS rtt_ros geometry_msgs std_msgs message_runtime rtt_roscomm cartesian_trajectory_msgs trapezoid_trajectory_msgs trajectory_msgs rtt_actionlib urdfdom_headers kdl_parser
 )
 
 orocos_install_headers(
