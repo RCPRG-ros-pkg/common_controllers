@@ -244,15 +244,15 @@ bool JointStatePublisher<DOFS>::configureHook() {
   constant_names_ = constant_names_verified;
   constant_positions_ = constant_positions_verified;
 
-  std::cout << "moveable joints:" << std::endl;
+  Logger::log() << Logger::Info << "moveable joints:" << Logger::endl;
   for (int i = 0; i < names_.size(); ++i) {
-    std::cout << "  " << names_[i] << ", index mapping: " << i << " -> " << moveable_idx_map_[i]
-                                                                                    << std::endl;
+    Logger::log() << Logger::Info << "  " << names_[i]
+                     << ", index mapping: " << i << " -> " << moveable_idx_map_[i] << Logger::endl;
   }
-  std::cout << "fixed joints:" << std::endl;
+  Logger::log() << Logger::Info << "fixed joints:" << Logger::endl;
   for (int i = 0; i < constant_names_.size(); ++i) {
-    std::cout << "  " << constant_names_[i] << ", index mapping: " << i << " -> " <<
-                                                          fixed_idx_map_[i] << std::endl;
+    Logger::log() << Logger::Info << "  " << constant_names_[i]
+                    << ", index mapping: " << i << " -> " << fixed_idx_map_[i] << Logger::endl;
   }
 
   int DOFS_verified = names_.size() + constant_names_.size();
