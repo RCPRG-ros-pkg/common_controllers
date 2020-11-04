@@ -140,10 +140,11 @@ void JointLimitAvoidance<DOFS>::updateHook() {
         }
     }
     if (!limit_ok) {
-        RTT::Logger::In in("JointLimitAvoidance::updateHook");
-        error();
-        Logger::log() << Logger::Error << "joint " << i << " position in not within limits: " << joint_position_(i) << Logger::endl;
-        return;
+        // Do nothing: this may sometimes happen, but it is not a big problem
+        //RTT::Logger::In in("JointLimitAvoidance::updateHook");
+        //error();
+        //Logger::log() << Logger::Error << "joint " << i << " position in not within limits: " << joint_position_(i) << Logger::endl;
+        //return;
     }
     joint_torque_command_(i) = jointLimitTrq(up_limit,
                                lo_limit, limit_range_[i], max_trq_[i],
