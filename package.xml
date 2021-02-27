@@ -23,10 +23,13 @@
   <build_depend>liburdfdom-headers-dev</build_depend>
   <build_depend>kdl_parser</build_depend>
   <build_depend>liborocos-kdl-dev</build_depend>
+  <build_depend>fabric_logger</build_depend>
+  
 
   <run_depend>rtt</run_depend>
   <run_depend>ocl</run_depend>
   <run_depend>rtt_ros</run_depend>
+  <run_depend>fabric_logger</run_depend>
 
   <!--<build_export_depend>liborocos-kdl-dev</build_export_depend>-->
   <run_depend>liborocos-kdl</run_depend>

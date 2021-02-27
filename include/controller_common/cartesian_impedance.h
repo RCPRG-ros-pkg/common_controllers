@@ -28,7 +28,11 @@
 
 #include "eigen_conversions/eigen_msg.h"
 
+#include "fabric_logger/fabric_logger.h"
+
 using namespace RTT;
+using fabric_logger::FabricLoggerInterfaceRtPtr;
+using fabric_logger::FabricLogger;
 
 template <unsigned DOFS, unsigned EFFECTORS>
 class CartesianImpedance: public RTT::TaskContext {
@@ -105,6 +109,8 @@ class CartesianImpedance: public RTT::TaskContext {
   Stiffness tmpK_;
 
   bool first_step_;
+
+  FabricLoggerInterfaceRtPtr m_fabric_logger;
 };
 
 #ifdef EIGEN_RUNTIME_NO_MALLOC
@@ -115,14 +121,15 @@ class CartesianImpedance: public RTT::TaskContext {
 #endif
 
 template <unsigned DOFS, unsigned EFFECTORS>
-  CartesianImpedance<DOFS, EFFECTORS>::CartesianImpedance(const std::string &name) :
-    RTT::TaskContext(name, PreOperational),
-    port_joint_torque_command_("JointTorqueCommand_OUTPORT", false),
-    port_joint_position_("JointPosition_INPORT"),
-    port_joint_velocity_("JointVelocity_INPORT"),
-    port_mass_matrix_inv_("MassMatrixInv_INPORT"),
-    port_nullspace_torque_command_("NullSpaceTorqueCommand_INPORT") {
-
+  CartesianImpedance<DOFS, EFFECTORS>::CartesianImpedance(const std::string &name)
+  : RTT::TaskContext(name, PreOperational)
+  , port_joint_torque_command_("JointTorqueCommand_OUTPORT", false)
+  , port_joint_position_("JointPosition_INPORT")
+  , port_joint_velocity_("JointVelocity_INPORT")
+  , port_mass_matrix_inv_("MassMatrixInv_INPORT")
+  , port_nullspace_torque_command_("NullSpaceTorqueCommand_INPORT")
+  , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("CartesianImpedance: ") + name, 10000) )
+  {
     this->ports()->addPort(port_joint_position_);
     this->ports()->addPort(port_joint_velocity_);
     this->ports()->addPort(port_mass_matrix_inv_);
@@ -137,20 +144,25 @@ template <unsigned DOFS, unsigned EFFECTORS>
 
     robot_ = this->getProvider<Robot>("robot");
     if (!robot_) {
+      m_fabric_logger << "ERROR: Unable to load RobotService" << FabricLogger::End();
       Logger::log() << Logger::Error << "Unable to load RobotService"
                            << Logger::endl;
       return false;
     }
 
     if (robot_->dofs() != DOFS) {
+      m_fabric_logger << "ERROR: wrong number of DOFs:" << robot_->dofs()
+                                                << ", expected " << DOFS << FabricLogger::End();
       Logger::log() << Logger::Error << "wrong number of DOFs: " << robot_->dofs()
-                           << ", expected " << DOFS << Logger::endl;
+                                                      << ", expected " << DOFS << Logger::endl;
       return false;
     }
 
     if (robot_->effectors() != EFFECTORS) {
+      m_fabric_logger << "ERROR: wrong number of effectors: " << robot_->effectors()
+                                          << ", expected " << EFFECTORS << FabricLogger::End();
       Logger::log() << Logger::Error << "wrong number of effectors: " << robot_->effectors()
-                           << ", expected " << EFFECTORS << Logger::endl;
+                                                    << ", expected " << EFFECTORS << Logger::endl;
       return false;
     }
 
@@ -270,9 +282,12 @@ template <unsigned DOFS, unsigned EFFECTORS>
           tools[i](6) = pos.orientation.z;
         }
         else {
-          RTT::Logger::In in("CartesianImpedance::updateHook");
+          m_fabric_logger << "ERROR: could not read port \'"
+                      << port_tool_position_command_[i]->getName() << "\'" << FabricLogger::End();
+
+          //RTT::Logger::In in("CartesianImpedance::updateHook");
           error();
-          Logger::log() << Logger::Error << "could not read port \'" << port_tool_position_command_[i]->getName() << "\'" << Logger::endl;
+          //Logger::log() << Logger::Error << "could not read port \'" << port_tool_position_command_[i]->getName() << "\'" << Logger::endl;
           return;
         }
       }
@@ -300,32 +315,38 @@ template <unsigned DOFS, unsigned EFFECTORS>
 
     // read inputs
     if (port_joint_position_.read(joint_position_) != RTT::NewData) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: could not read port \'" << port_joint_position_.getName()
+                                                                  << "\'" << FabricLogger::End();
+
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
         error();
-        Logger::log() << Logger::Error << "could not read port \'" << port_joint_position_.getName() << "\'" << Logger::endl;
+        //Logger::log() << Logger::Error << "could not read port \'" << port_joint_position_.getName() << "\'" << Logger::endl;
         return;
     }
 
     if (!joint_position_.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: joint_position_ contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "joint_position_ contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "joint_position_ contains NaN or inf" << Logger::endl;
         return;
     }
 
     port_joint_velocity_.read(joint_velocity_);
     if (!joint_velocity_.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: joint_velocity_ contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "joint_velocity_ contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "joint_velocity_ contains NaN or inf" << Logger::endl;
         return;
     }
 
     port_nullspace_torque_command_.read(nullspace_torque_command_);
     if (!nullspace_torque_command_.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: nullspace_torque_command_ contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "nullspace_torque_command_ contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "nullspace_torque_command_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -366,16 +387,19 @@ template <unsigned DOFS, unsigned EFFECTORS>
     }
 
     if (port_mass_matrix_inv_.read(M) != RTT::NewData) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: could not read port \'" << port_mass_matrix_inv_.getName()
+                                                                  << "\'" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "could not read port \'" << port_mass_matrix_inv_.getName() << "\'" << Logger::endl;
+        //Logger::log() << Logger::Error << "could not read port \'" << port_mass_matrix_inv_.getName() << "\'" << Logger::endl;
         return;
     }
 
     if (!M.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: M contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "M contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "M contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -383,9 +407,10 @@ template <unsigned DOFS, unsigned EFFECTORS>
     robot_->jacobian(J, joint_position_, &tools[0]);
 
     if (!J.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: J contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "J contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "J contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -396,9 +421,10 @@ template <unsigned DOFS, unsigned EFFECTORS>
     Mi = lu_.inverse();
 
     if (!Mi.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: Mi contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "Mi contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "Mi contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -422,9 +448,10 @@ template <unsigned DOFS, unsigned EFFECTORS>
     joint_torque_command_.noalias() = JT * F;
 
     if (!joint_torque_command_.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: joint_torque_command_ contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "joint_torque_command_ contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "joint_torque_command_ contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -453,9 +480,10 @@ template <unsigned DOFS, unsigned EFFECTORS>
     F.noalias() = Dc * tmpK_;
 
     if (!F.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: F contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "F contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "F contains NaN or inf" << Logger::endl;
         return;
     }
 
@@ -491,9 +519,10 @@ template <unsigned DOFS, unsigned EFFECTORS>
     P.noalias() -=  J.transpose() * A * J * Mi;
 
     if (!P.allFinite()) {
-        RTT::Logger::In in("CartesianImpedance::updateHook");
+        //RTT::Logger::In in("CartesianImpedance::updateHook");
+        m_fabric_logger << "ERROR: P contains NaN or inf" << FabricLogger::End();
         error();
-        Logger::log() << Logger::Error << "P contains NaN or inf" << Logger::endl;
+        //Logger::log() << Logger::Error << "P contains NaN or inf" << Logger::endl;
         return;
     }
 
