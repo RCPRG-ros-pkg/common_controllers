@@ -56,6 +56,11 @@
 
 #include "controller_common/velocityprofile_spline.hpp"
 
+#include "fabric_logger/fabric_logger.h"
+
+using fabric_logger::FabricLoggerInterfaceRtPtr;
+using fabric_logger::FabricLogger;
+
 #ifdef EIGEN_RUNTIME_NO_MALLOC
 #define RESTRICT_ALLOC Eigen::internal::set_is_malloc_allowed(false)
 #define UNRESTRICT_ALLOC Eigen::internal::set_is_malloc_allowed(true)
@@ -80,10 +85,10 @@ class InternalSpaceSplineTrajectoryGenerator : public RTT::TaskContext {
   TRAJECTORY_TYPE jnt_command_in_;
   RTT::InputPort<TRAJECTORY_TYPE > port_jnt_command_in_;
 
-  VectorNd internal_space_position_measurement_in_;
-  RTT::OutputPort<VectorNd> port_internal_space_position_command_out_;
-  RTT::OutputPort<VectorNd> port_internal_space_velocity_command_out_;
-  RTT::InputPort<VectorNd> port_internal_space_position_measurement_in_;
+  VectorNd pos_msr_in_;
+  RTT::OutputPort<VectorNd> port_pos_cmd_out_;
+  RTT::OutputPort<VectorNd> port_vel_cmd_out_;
+  RTT::InputPort<VectorNd> port_pos_msr_in_;
   RTT::InputPort<bool> port_is_synchronised_in_;
 
   VectorNd stiffness_command_out_;
@@ -109,6 +114,8 @@ class InternalSpaceSplineTrajectoryGenerator : public RTT::TaskContext {
   bool empty_trj_received_;
 
   bool first_step_;
+
+  FabricLoggerInterfaceRtPtr m_fabric_logger;
 };
 
 using namespace RTT;
@@ -121,17 +128,19 @@ InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::InternalSpaceSplineTra
     , trajectory_idx_(0)
     , trajectory_(TRAJECTORY_TYPE())
     , port_jnt_command_in_("jnt_INPORT")
-    , port_internal_space_position_command_out_("JointPositionCommand_OUTPORT", true)
-    , port_internal_space_velocity_command_out_("JointVelocityCommand_OUTPORT", true)
-    , port_internal_space_position_measurement_in_("JointPosition_INPORT")
+    , port_pos_cmd_out_("JointPositionCommand_OUTPORT", true)
+    , port_vel_cmd_out_("JointVelocityCommand_OUTPORT", true)
+    , port_pos_msr_in_("JointPosition_INPORT")
     , port_is_synchronised_in_("IsSynchronised_INPORT")
     , port_generator_status_out_("generator_status_OUTPORT")
     , port_stiffness_command_out_("stiffness_command_OUTPORT")
-    , empty_trj_received_(false) {
+    , empty_trj_received_(false)
+    , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("SplineGen: ") + name, 100000) )
+{
   this->ports()->addPort(port_jnt_command_in_);
-  this->ports()->addPort(port_internal_space_position_command_out_);
-  this->ports()->addPort(port_internal_space_velocity_command_out_);
-  this->ports()->addPort(port_internal_space_position_measurement_in_);
+  this->ports()->addPort(port_pos_cmd_out_);
+  this->ports()->addPort(port_vel_cmd_out_);
+  this->ports()->addPort(port_pos_msr_in_);
   this->ports()->addPort(port_is_synchronised_in_);
   this->ports()->addPort(port_generator_status_out_);
   this->ports()->addPort(port_stiffness_command_out_);
@@ -176,22 +185,35 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::stopHook() {
 template <class TRAJECTORY_TYPE >
 void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
 
-  bool read_port_internal_space_position_measurement_in = false;
-  if (first_step_) {
-    FlowStatus read_status = port_internal_space_position_measurement_in_.read(setpoint_);
-    if (read_status != RTT::NewData) {
+  if (port_pos_msr_in_.read(pos_msr_in_) != RTT::NewData) {
+      m_fabric_logger << "ERROR: could not read port " << port_pos_msr_in_.getName()
+                                                                          << FabricLogger::End();
       Logger::In in("InternalSpaceSplineTrajectoryGenerator::updateHook");
-      Logger::log() << Logger::Error << "could not read data on port "
-                    << port_internal_space_position_measurement_in_.getName() << Logger::endl;
+      Logger::log() << Logger::Error << "could not read port " << port_pos_msr_in_.getName()
+                                                                          << Logger::endl;
       error();
       return;
-    }
+  }
 
-    for (unsigned int i = 0; i < TRAJECTORY_TYPE::DOFS; i++) {
-      vel_setpoint_(i) = 0.0;
-    }
+  //bool read_port_internal_space_position_measurement_in = false;
+  if (first_step_) {
+    first_step_ = false;
+    //FlowStatus read_status = port_pos_msr_in_.read(setpoint_);
+    //if (read_status != RTT::NewData) {
+    //  Logger::In in("InternalSpaceSplineTrajectoryGenerator::updateHook");
+    //  Logger::log() << Logger::Error << "could not read data on port "
+    //                << port_pos_msr_in_.getName() << Logger::endl;
+    //  error();
+    //  return;
+    //}
+    setpoint_ = pos_msr_in_;
 
-    read_port_internal_space_position_measurement_in = true;
+    //for (unsigned int i = 0; i < TRAJECTORY_TYPE::DOFS; i++) {
+    //  vel_setpoint_(i) = 0.0;
+    //}
+    vel_setpoint_.setZero();
+
+    //read_port_internal_space_position_measurement_in = true;
 
     bool is_synchronised = true;
     port_is_synchronised_in_.read(is_synchronised);
@@ -202,7 +224,6 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
       error();
       return;
     }
-    first_step_ = false;
   }
 
   if (port_jnt_command_in_.read(jnt_command_in_) == RTT::NewData) {
@@ -288,17 +309,19 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
           }
       }
 
+      /*
       if (read_port_internal_space_position_measurement_in) {
-          internal_space_position_measurement_in_ = setpoint_;
+          pos_msr_in_ = setpoint_;
       }
       else {
-          if (port_internal_space_position_measurement_in_.read(internal_space_position_measurement_in_) != RTT::NewData) {
+          if (port_pos_msr_in_.read(pos_msr_in_) != RTT::NewData) {
                 Logger::In in("InternalSpaceSplineTrajectoryGenerator::updateHook");
-                Logger::log() << Logger::Error << "could not read port " << port_internal_space_position_measurement_in_.getName() << Logger::endl;
+                Logger::log() << Logger::Error << "could not read port " << port_pos_msr_in_.getName() << Logger::endl;
               error();
               return;
           }
       }
+      */
 
       if (trajectory_idx_ < trajectory_.count_trj) {
           double t;
@@ -325,7 +348,7 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
 
       // check path tolerance
       for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-          if ( trajectory_.path_tolerance[i] > 0 && fabs(internal_space_position_measurement_in_(i)-prev_setpoint_(i)) > trajectory_.path_tolerance[i]) {
+          if ( trajectory_.path_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.path_tolerance[i]) {
               resetTrajectory();
               generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
           }
@@ -339,7 +362,7 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
       // check goal tolerance
       bool goal_reached = true;
       for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-          if ( trajectory_.goal_tolerance[i] > 0 && fabs(internal_space_position_measurement_in_(i)-prev_setpoint_(i)) > trajectory_.goal_tolerance[i]) {
+          if ( trajectory_.goal_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.goal_tolerance[i]) {
               goal_reached = false;
           }
       }
@@ -368,8 +391,22 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
   port_generator_status_out_.write(generator_status_);
 
   port_stiffness_command_out_.write(stiffness_command_out_);
-  port_internal_space_position_command_out_.write(setpoint_);
-  port_internal_space_velocity_command_out_.write(vel_setpoint_);
+  port_pos_cmd_out_.write(setpoint_);
+  port_vel_cmd_out_.write(vel_setpoint_);
+
+  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+    m_fabric_logger << pos_msr_in_(i) << " ";
+  }
+
+  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+    m_fabric_logger << setpoint_(i) << " ";
+  }
+
+  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+    m_fabric_logger << vel_setpoint_(i) << " ";
+  }
+
+  m_fabric_logger << FabricLogger::End();
 }
 
 template <class TRAJECTORY_TYPE >

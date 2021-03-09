@@ -128,7 +128,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
   , port_joint_velocity_("JointVelocity_INPORT")
   , port_mass_matrix_inv_("MassMatrixInv_INPORT")
   , port_nullspace_torque_command_("NullSpaceTorqueCommand_INPORT")
-  , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("CartesianImpedance: ") + name, 10000) )
+  , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("CartesianImpedance: ") + name, 100000) )
   {
     this->ports()->addPort(port_joint_position_);
     this->ports()->addPort(port_joint_velocity_);
