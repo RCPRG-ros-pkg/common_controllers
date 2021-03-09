@@ -394,19 +394,22 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
   port_pos_cmd_out_.write(setpoint_);
   port_vel_cmd_out_.write(vel_setpoint_);
 
-  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-    m_fabric_logger << pos_msr_in_(i) << " ";
-  }
+  bool log_all_data = false;
+  if (log_all_data) {
+    for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+      m_fabric_logger << pos_msr_in_(i) << " ";
+    }
 
-  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-    m_fabric_logger << setpoint_(i) << " ";
-  }
+    for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+      m_fabric_logger << setpoint_(i) << " ";
+    }
 
-  for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-    m_fabric_logger << vel_setpoint_(i) << " ";
-  }
+    for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+      m_fabric_logger << vel_setpoint_(i) << " ";
+    }
 
-  m_fabric_logger << FabricLogger::End();
+    m_fabric_logger << FabricLogger::End();
+  }
 }
 
 template <class TRAJECTORY_TYPE >
