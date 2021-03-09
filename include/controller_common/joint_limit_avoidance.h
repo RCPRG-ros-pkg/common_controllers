@@ -140,11 +140,39 @@ void JointLimitAvoidance<DOFS>::updateHook() {
         }
     }
     if (!limit_ok) {
-        // Do nothing: this may sometimes happen, but it is not a big problem
-        //RTT::Logger::In in("JointLimitAvoidance::updateHook");
-        //error();
-        //Logger::log() << Logger::Error << "joint " << i << " position in not within limits: " << joint_position_(i) << Logger::endl;
-        //return;
+      // This may sometimes happen, but it is not a big problem
+      // The position in the joint violates the limit, so we have to search the closest violated
+      // limit and apply the repulsive force anyway
+      int closest_limit_idx = -1;
+      double closest_limit_dist = 10000000.0;
+      for (int j = 0; j < limits_[i].size(); j += 2) {
+          double dist = fabs(limits_[i][j]-joint_position_(i));
+          if (dist < closest_limit_dist) {
+            closest_limit_dist = dist;
+            closest_limit_idx = j;
+          }
+          dist = fabs(limits_[i][j+1]-joint_position_(i));
+          if (dist < closest_limit_dist) {
+            closest_limit_dist = dist;
+            closest_limit_idx = j;
+          }
+      }
+
+      if (closest_limit_idx < 0) {
+        // Something really bad happend
+        RTT::Logger::In in("JointLimitAvoidance::updateHook");
+        error();
+        Logger::log() << Logger::Error << "could not find violated limit" << Logger::endl;
+        return;
+      }
+      limit_ok = true;
+      lo_limit = limits_[i][closest_limit_idx];
+      up_limit = limits_[i][closest_limit_idx+1];
+
+      //RTT::Logger::In in("JointLimitAvoidance::updateHook");
+      //error();
+      //Logger::log() << Logger::Error << "joint " << i << " position in not within limits: " << joint_position_(i) << Logger::endl;
+      //return;
     }
     joint_torque_command_(i) = jointLimitTrq(up_limit,
                                lo_limit, limit_range_[i], max_trq_[i],
@@ -198,9 +226,17 @@ template <unsigned DOFS>
 double JointLimitAvoidance<DOFS>::jointLimitTrq(double hl, double ll, double ls,
     double r_max, double q) {
   if (q > (hl - ls)) {
-    return -1 * ((q - hl + ls) / ls) * ((q - hl + ls) / ls) * r_max;
+    double torque = -1 * ((q - hl + ls) / ls) * ((q - hl + ls) / ls) * r_max;
+    if (torque < -r_max) {
+      torque = -r_max;
+    }
+    return torque;
   } else if (q < (ll + ls)) {
-    return ((ll + ls - q) / ls) * ((ll + ls - q) / ls) * r_max;
+    double torque = ((ll + ls - q) / ls) * ((ll + ls - q) / ls) * r_max;
+    if (torque > r_max) {
+      torque = r_max;
+    }
+    return torque;
   } else {
     return 0.0;
   }
