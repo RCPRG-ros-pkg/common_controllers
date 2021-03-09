@@ -33,19 +33,19 @@ namespace controller_common {
 
 namespace elmo_servo {
 
-const uint16_t SW_ReadyToSwitchOn_Mask = 0x0001;
-const uint16_t SW_SwitchedOn_Mask = 0x0002;
-const uint16_t SW_OperationEnabled_Mask = 0x0004;
-const uint16_t SW_Fault_Mask = 0x0008;
-const uint16_t SW_VoltageEnabled_Mask = 0x0010;
-const uint16_t SW_QuickStop_Mask = 0x0020;
-const uint16_t SW_SwitchOnDisabled_Mask = 0x0040;
-const uint16_t SW_Warning_Mask = 0x0080;
-const uint16_t SW_ManufactureSpecific_Mask = 0x0100;
-const uint16_t SW_Remote_Mask = 0x0200;
-const uint16_t SW_TargetReached_Mask = 0x0400;
-const uint16_t SW_InternalLimitActive_Mask = 0x0800;
-const uint16_t SW_HomingComplete_Mask = 0x1000;
+const uint16_t SW_ReadyToSwitchOn_Mask = 0x0001;        // 0000.0000.0001
+const uint16_t SW_SwitchedOn_Mask = 0x0002;             // 0000.0000.0010
+const uint16_t SW_OperationEnabled_Mask = 0x0004;       // 0000.0000.0100
+const uint16_t SW_Fault_Mask = 0x0008;                  // 0000.0000.1000
+const uint16_t SW_VoltageEnabled_Mask = 0x0010;         // 0000.0001.0000
+const uint16_t SW_QuickStop_Mask = 0x0020;              // 0000.0010.0000
+const uint16_t SW_SwitchOnDisabled_Mask = 0x0040;       // 0000.0100.0000
+const uint16_t SW_Warning_Mask = 0x0080;                // 0000.1000.0000
+const uint16_t SW_ManufactureSpecific_Mask = 0x0100;    // 0001.0000.0000
+const uint16_t SW_Remote_Mask = 0x0200;                 // 0010.0000.0000
+const uint16_t SW_TargetReached_Mask = 0x0400;          // 0100.0000.0000
+const uint16_t SW_InternalLimitActive_Mask = 0x0800;    // 1000.0000.0000
+const uint16_t SW_HomingComplete_Mask = 0x1000;         //
 
 const uint16_t NotReadyToSwitchOn_Mask = SW_ReadyToSwitchOn_Mask
     | SW_SwitchedOn_Mask | SW_OperationEnabled_Mask | SW_Fault_Mask
