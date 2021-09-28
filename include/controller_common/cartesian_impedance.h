@@ -111,6 +111,9 @@ class CartesianImpedance: public RTT::TaskContext {
   bool first_step_;
 
   FabricLoggerInterfaceRtPtr m_fabric_logger;
+
+  // Parameters
+  bool enable_rt_logging_;
 };
 
 #ifdef EIGEN_RUNTIME_NO_MALLOC
@@ -128,7 +131,8 @@ template <unsigned DOFS, unsigned EFFECTORS>
   , port_joint_velocity_("JointVelocity_INPORT")
   , port_mass_matrix_inv_("MassMatrixInv_INPORT")
   , port_nullspace_torque_command_("NullSpaceTorqueCommand_INPORT")
-  , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("CartesianImpedance: ") + name, 100000) )
+  , m_fabric_logger( FabricLogger::createNewInterfaceRt( std::string("CartesianImpedance: ") + name, 1000000) )
+  , enable_rt_logging_(false)
   {
     this->ports()->addPort(port_joint_position_);
     this->ports()->addPort(port_joint_velocity_);
@@ -136,6 +140,7 @@ template <unsigned DOFS, unsigned EFFECTORS>
 
     this->ports()->addPort(port_joint_torque_command_);
     this->ports()->addPort(port_nullspace_torque_command_);
+    addProperty("enable_rt_logging", enable_rt_logging_);
   }
 
 template <unsigned DOFS, unsigned EFFECTORS>
@@ -309,7 +314,6 @@ template <unsigned DOFS, unsigned EFFECTORS>
       first_step_ = false;
     }
 
-
     // ToolMass toolsM[K];
     Eigen::Affine3d r[EFFECTORS];
 
@@ -350,10 +354,18 @@ template <unsigned DOFS, unsigned EFFECTORS>
         return;
     }
 
+    //bool rt_logging_output = false;
     for (size_t i = 0; i < EFFECTORS; i++) {
       geometry_msgs::Pose pos;
       if (port_cartesian_position_command_[i]->read(pos) == RTT::NewData) {
         tf::poseMsgToEigen(pos, r_cmd[i]);
+        if (enable_rt_logging_) {
+          m_fabric_logger << "cmd " << i << " " << pos.position.x << " " << pos.position.y
+                          << " " << pos.position.z << " " << pos.orientation.x
+                          << " " << pos.orientation.y << " " << pos.orientation.z
+                          << " " << pos.orientation.w << FabricLogger::End();
+          //rt_logging_output = true;
+        }
       }
 
       if (port_tool_position_command_[i]->read(pos) == RTT::NewData) {
@@ -365,6 +377,14 @@ template <unsigned DOFS, unsigned EFFECTORS>
         tools[i](4) = pos.orientation.x;
         tools[i](5) = pos.orientation.y;
         tools[i](6) = pos.orientation.z;
+
+        if (enable_rt_logging_) {
+          m_fabric_logger << "tool " << i << " " << pos.position.x << " " << pos.position.y
+                          << " " << pos.position.z << " " << pos.orientation.x
+                          << " " << pos.orientation.y << " " << pos.orientation.z
+                          << " " << pos.orientation.w << FabricLogger::End();
+          //rt_logging_output = true;
+        }
       }
 
       cartesian_trajectory_msgs::CartesianImpedance impedance;
@@ -415,6 +435,23 @@ template <unsigned DOFS, unsigned EFFECTORS>
     }
 
     robot_->fkin(r, joint_position_, &tools[0]);
+
+    if (enable_rt_logging_) {
+      for (int i = 0; i < EFFECTORS; i++) {
+        Eigen::Quaterniond q( r[i].rotation() );
+        Eigen::Vector3d t(r[i].translation());
+        m_fabric_logger << "pos " << i << " " << t(0) << " " << t(1)
+                        << " " << t(2) << " " << q.x()
+                        << " " << q.y() << " " << q.z()
+                        << " " << q.w() << FabricLogger::End();
+      }
+      //rt_logging_output = true;
+    }
+
+    //if (enable_rt_logging_ && rt_logging_output) {
+    //  m_fabric_logger << FabricLogger::End();
+    //}
+
 
     JT = J.transpose();
     lu_.compute(M);
@@ -531,6 +568,17 @@ template <unsigned DOFS, unsigned EFFECTORS>
     // write outputs
     UNRESTRICT_ALLOC;
     port_joint_torque_command_.write(joint_torque_command_);
+
+    if (enable_rt_logging_) {
+      m_fabric_logger << "torque ";
+      for (int i = 0; i < DOFS; i++) {
+        if (i > 0) {
+          m_fabric_logger << " ";
+        }
+        m_fabric_logger << joint_torque_command_(i);
+      }
+      m_fabric_logger << FabricLogger::End();
+    }
 
     for (size_t i = 0; i < EFFECTORS; i++) {
       geometry_msgs::Pose pos;
