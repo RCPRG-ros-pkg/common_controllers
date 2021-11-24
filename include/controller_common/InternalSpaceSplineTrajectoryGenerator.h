@@ -355,6 +355,7 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
         for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
             stiffness_command_out_(i) = trajectory_.stiffness[i];
         }
+        m_fabric_logger << "received new trajectory" << FabricLogger::End();
     }
 
     ros::Time now = rtt_rosclock::host_now();
@@ -393,6 +394,8 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
             if ( trajectory_.path_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.path_tolerance[i]) {
                 resetTrajectory();
                 generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
+                m_fabric_logger << "path tolerance violated" << FabricLogger::End();
+                break;
             }
         }
 
@@ -400,37 +403,44 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
         ++trajectory_iteration_index_;
     }
 
-    // Check if the goal is reached
-    if (empty_trj_received_) {
-        resetTrajectory();
-        generator_status_ = internal_space_spline_trajectory_status::SUCCESSFUL;
-    }
-    else if (trajectory_idx_ == trajectory_.count_trj) {
-        // check goal tolerance
-        bool goal_reached = true;
-        for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
-            if ( trajectory_.goal_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.goal_tolerance[i]) {
-                goal_reached = false;
-            }
-        }
-
-        if (goal_reached) {
+    if (generator_status_ == internal_space_spline_trajectory_status::ACTIVE) {
+        // Check if the goal is reached
+        if (empty_trj_received_) {
             resetTrajectory();
             generator_status_ = internal_space_spline_trajectory_status::SUCCESSFUL;
+            m_fabric_logger << "the received trajectory is empty" << FabricLogger::End();
         }
-        else {
-            if (trajectory_.start.isZero()) {
-                // Use iteration index
-                // goal_time_tolerance is not used in this case
+        else if (trajectory_idx_ == trajectory_.count_trj) {
+            // check goal tolerance
+            bool goal_reached = true;
+            for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
+                if ( trajectory_.goal_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.goal_tolerance[i]) {
+                    goal_reached = false;
+                    break;
+                }
+            }
+
+            if (goal_reached) {
                 resetTrajectory();
-                generator_status_ = internal_space_spline_trajectory_status::GOAL_TOLERANCE_VIOLATED;
+                generator_status_ = internal_space_spline_trajectory_status::SUCCESSFUL;
+                m_fabric_logger << "the goal is reached" << FabricLogger::End();
             }
             else {
-                // Use time
-                ros::Time goal_time = trajectory_.start + trajectory_.trj[trajectory_.count_trj - 1].time_from_start;
-                if (now > goal_time + trajectory_.goal_time_tolerance) {
+                if (trajectory_.start.isZero()) {
+                    // Use iteration index
+                    // goal_time_tolerance is not used in this case
                     resetTrajectory();
                     generator_status_ = internal_space_spline_trajectory_status::GOAL_TOLERANCE_VIOLATED;
+                    m_fabric_logger << "goal tolerance violated (iteration index)" << FabricLogger::End();
+                }
+                else {
+                    // Use time
+                    ros::Time goal_time = trajectory_.start + trajectory_.trj[trajectory_.count_trj - 1].time_from_start;
+                    if (now > goal_time + trajectory_.goal_time_tolerance) {
+                        resetTrajectory();
+                        generator_status_ = internal_space_spline_trajectory_status::GOAL_TOLERANCE_VIOLATED;
+                        m_fabric_logger << "goal tolerance violated (time)" << FabricLogger::End();
+                    }
                 }
             }
         }
