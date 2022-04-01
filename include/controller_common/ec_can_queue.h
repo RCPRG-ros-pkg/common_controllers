@@ -126,7 +126,7 @@ public:
             txCount_prev_ = txCount;
         }
         else {
-            msgcount = 0;
+            return false;
         }
 
         can_frame frame;
