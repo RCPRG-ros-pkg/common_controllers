@@ -34,6 +34,11 @@
 #include <rtt/Logger.hpp>
 #include <stdlib.h>
 
+#include "fabric_logger/fabric_logger.h"
+
+using fabric_logger::FabricLoggerInterfaceRtPtr;
+using fabric_logger::FabricLogger;
+
 using namespace RTT;
 
 namespace controller_common {
@@ -57,6 +62,7 @@ class EcCanQueue
     int dbg_id_;
 #endif  // DBG_PRINT_BUFFER_LOAD
 
+    FabricLoggerInterfaceRtPtr m_fabric_logger;
 public:
     static constexpr auto QUEUE_LENGTH = (N_FRAMES * 5);
 
@@ -65,6 +71,7 @@ public:
         ,   port_rx_queue_in_("rx_queue_INPORT")
         ,   frames_count_(0)
         ,   port_tx_out_("tx_OUTPORT")
+        ,   m_fabric_logger( FabricLogger::createNewInterfaceRt( owner->getName() + "_EcCanQueue", 100000) )
     {
         owner->ports()->addPort(port_rx_queue_in_);
         owner->ports()->addPort(port_tx_out_);
@@ -102,16 +109,21 @@ public:
         const auto rxdata = rx_queue_in_.data();
         const auto msgcount = *(uint16_t*)(rxdata + 4);
         if (msgcount > N_FRAMES) {
-            RTT::Logger::In in("EcCanQueue::readQueue");
-            Logger::log() << Logger::Error << "wrong frames read msgcount: " << msgcount << Logger::endl;
+            m_fabric_logger << "ERROR: wrong frames read msgcount: " << msgcount << FabricLogger::End();
+
             return false;
         }
+
+
+        int txCount = *(uint16_t*)(rxdata + 2);
+        int rxCount = *(uint16_t*)(rxdata + 0);
+
+        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << FabricLogger::End();
 
         can_frame frame;
         for (uint16_t i = 0; i < msgcount; ++i) {
             if (!deserialize(rxdata + 6 + i * 10, frame)) {
-                RTT::Logger::In in("EcCanQueue::readQueue");
-                Logger::log() << Logger::Error << "could not deserialize CAN frame: " << Logger::endl;
+                m_fabric_logger << "could not deserialize CAN frame" << FabricLogger::End();
                 return false;
             }
 
