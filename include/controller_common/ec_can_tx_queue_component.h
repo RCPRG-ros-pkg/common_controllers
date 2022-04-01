@@ -36,6 +36,11 @@
 
 #include "ec_can_queue.h"
 
+#include "fabric_logger/fabric_logger.h"
+
+using fabric_logger::FabricLoggerInterfaceRtPtr;
+using fabric_logger::FabricLogger;
+
 using namespace RTT;
 
 namespace controller_common {
@@ -43,6 +48,8 @@ namespace ec_can_queue {
 
 class CanQueueTxComponent
     :   public RTT::TaskContext {
+    FabricLoggerInterfaceRtPtr m_fabric_logger;
+
 public:
     explicit CanQueueTxComponent(const std::string &name)
         : TaskContext(name)
@@ -52,6 +59,7 @@ public:
         , rxCount_prev_(0)
         , txCount_prev_(0)
         , invert_rx_tx_(false)
+        , m_fabric_logger( FabricLogger::createNewInterfaceRt( name, 10000) )
     {
         this->ports()->addPort(port_tx_in_);
         this->ports()->addPort(port_rx_queue_in_);
@@ -99,14 +107,17 @@ public:
             can_frame fr;
             while (port_tx_in_.read(fr) == RTT::NewData) {
                 if (msgs_count >= N_FRAMES) {
-                    RTT::Logger::In in("CanQueueTxComponent::updateHook");
-                    Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
+                    m_fabric_logger << "queue is overloaded " << FabricLogger::End();
+
+                    //RTT::Logger::In in("CanQueueTxComponent::updateHook");
+                    //Logger::log() << Logger::Error << "queue is overloaded" << Logger::endl;
                     break;
                 }
 
                 if (!serialize(fr, txdata + 6 + msgs_count*10)) {
-                    RTT::Logger::In in("CanQueueTxComponent::updateHook");
-                    Logger::log() << Logger::Error << "could not serialize CAN frame" << Logger::endl;
+                    //RTT::Logger::In in("CanQueueTxComponent::updateHook");
+                    //Logger::log() << Logger::Error << "could not serialize CAN frame" << Logger::endl;
+                    m_fabric_logger << "could not serialize CAN frame " << FabricLogger::End();
                     break;
                 }
 
