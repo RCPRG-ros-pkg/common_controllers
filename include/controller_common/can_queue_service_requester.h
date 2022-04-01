@@ -41,7 +41,7 @@ class CanQueueServiceRequester : public RTT::ServiceRequester {
         , send("send")
         , readQueue("readQueue")
         , readReply("readReply")
-        , readReply("getFramesCount") {
+        , getFramesCount("getFramesCount") {
     this->addOperationCaller(initialize);
     this->addOperationCaller(send);
     this->addOperationCaller(readQueue);
