@@ -59,7 +59,7 @@ public:
         , rxCount_prev_(0)
         , txCount_prev_(0)
         , invert_rx_tx_(false)
-        , m_fabric_logger( FabricLogger::createNewInterfaceRt( name, 10000) )
+        , m_fabric_logger( FabricLogger::createNewInterfaceRt( name, 100000) )
     {
         this->ports()->addPort(port_tx_in_);
         this->ports()->addPort(port_rx_queue_in_);
@@ -92,6 +92,8 @@ public:
             txCount = *(uint16_t*)(rxdata + 0);
             rxCount = *(uint16_t*)(rxdata + 2);
         }
+
+        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << FabricLogger::End();
 
         if (rxCount != rxCount_prev_) {
             // new data arrived
