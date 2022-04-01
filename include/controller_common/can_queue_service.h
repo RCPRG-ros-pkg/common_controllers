@@ -41,12 +41,14 @@ class CanQueueService: public RTT::Service {
     this->addOperation("send", &CanQueueService::send, this, RTT::ClientThread);
     this->addOperation("readQueue", &CanQueueService::readQueue, this, RTT::ClientThread);
     this->addOperation("readReply", &CanQueueService::readReply, this, RTT::ClientThread);
+    this->addOperation("getFramesCount", &CanQueueService::getFramesCount, this, RTT::ClientThread);
   }
 
   virtual void initialize(const std::string& dev_name, const std::vector<std::pair<uint32_t, uint32_t>>& filters) = 0;
   virtual bool send(uint16_t can_id, uint16_t len, const int8_t *data) = 0;
   virtual bool readQueue() = 0;
   virtual bool readReply(uint16_t can_id, uint16_t &dlc, int8_t *data) = 0;
+  virtual int getFramesCount() const = 0;
 };
 }  // namespace controller_common
 

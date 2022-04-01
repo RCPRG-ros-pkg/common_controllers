@@ -182,6 +182,10 @@ public:
         return false;
     }
 
+    int getFramesCount() const {
+        return frames_count_;
+    }
+
 private:
     bool deserialize(const int8_t *ptr, can_frame &frame) {
         const auto uptr = (const uint8_t*)(ptr);

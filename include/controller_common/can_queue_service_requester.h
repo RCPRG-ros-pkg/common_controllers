@@ -40,17 +40,20 @@ class CanQueueServiceRequester : public RTT::ServiceRequester {
         , initialize("initialize")
         , send("send")
         , readQueue("readQueue")
-        , readReply("readReply") {
+        , readReply("readReply")
+        , readReply("getFramesCount") {
     this->addOperationCaller(initialize);
     this->addOperationCaller(send);
     this->addOperationCaller(readQueue);
     this->addOperationCaller(readReply);
+    this->addOperationCaller(getFramesCount);
   }
 
   RTT::OperationCaller<void(const std::string&, const std::vector<std::pair<uint32_t, uint32_t > >&) > initialize;
   RTT::OperationCaller<bool(uint16_t, uint16_t, const int8_t*) > send;
   RTT::OperationCaller<bool() > readQueue;
   RTT::OperationCaller<bool(uint16_t, uint16_t&, int8_t*) > readReply;
+  RTT::OperationCaller<int() > getFramesCount;
 };
 
 }  // namespace controller_common
