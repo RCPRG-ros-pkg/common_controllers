@@ -129,6 +129,8 @@ public:
             }
         }
 
+        m_fabric_logger << "msgs_count: " << msgs_count << FabricLogger::End();
+
         if (invert_rx_tx_) {
             *(uint16_t*)(txdata + 2) = txCount_prev_;
             *(uint16_t*)(txdata + 0) = rxCount_prev_;
