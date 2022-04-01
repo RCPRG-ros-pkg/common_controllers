@@ -63,6 +63,7 @@ class EcCanQueue
 #endif  // DBG_PRINT_BUFFER_LOAD
 
     FabricLoggerInterfaceRtPtr m_fabric_logger;
+    int txCount_prev_;
 public:
     static constexpr auto QUEUE_LENGTH = (N_FRAMES * 5);
 
@@ -70,6 +71,7 @@ public:
         :   controller_common::CanQueueService(owner)
         ,   port_rx_queue_in_("rx_queue_INPORT")
         ,   frames_count_(0)
+        ,   txCount_prev_(0)
         ,   port_tx_out_("tx_OUTPORT")
         ,   m_fabric_logger( FabricLogger::createNewInterfaceRt( owner->getName() + "_EcCanQueue", 100000) )
     {
@@ -119,6 +121,13 @@ public:
         int rxCount = *(uint16_t*)(rxdata + 0);
 
         m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << FabricLogger::End();
+
+        if (txCount != txCount_prev_) {
+            txCount_prev_ = txCount;
+        }
+        else {
+            msgcount = 0;
+        }
 
         can_frame frame;
         for (uint16_t i = 0; i < msgcount; ++i) {
