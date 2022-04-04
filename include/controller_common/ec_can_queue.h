@@ -64,6 +64,7 @@ class EcCanQueue
 
     FabricLoggerInterfaceRtPtr m_fabric_logger;
     int txCount_prev_;
+    bool invert_rx_tx_;
 public:
     static constexpr auto QUEUE_LENGTH = (N_FRAMES * 5);
 
@@ -73,10 +74,13 @@ public:
         ,   frames_count_(0)
         ,   txCount_prev_(0)
         ,   port_tx_out_("tx_OUTPORT")
+        ,   invert_rx_tx_(false)
         ,   m_fabric_logger( FabricLogger::createNewInterfaceRt( owner->getName() + "_EcCanQueue", 100000) )
     {
         owner->ports()->addPort(port_rx_queue_in_);
         owner->ports()->addPort(port_tx_out_);
+
+        owner->addProperty("invert_rx_tx", invert_rx_tx_);
 
         can_frame fr;
         port_tx_out_.setDataSample(fr);
@@ -116,11 +120,18 @@ public:
             return false;
         }
 
+        int txCount;
+        int rxCount;
+        if (invert_rx_tx_) {
+            txCount = *(uint16_t*)(rxdata + 0);
+            rxCount = *(uint16_t*)(rxdata + 2);
+        }
+        else {
+            txCount = *(uint16_t*)(rxdata + 2);
+            rxCount = *(uint16_t*)(rxdata + 0);
+        }
 
-        int txCount = *(uint16_t*)(rxdata + 2);
-        int rxCount = *(uint16_t*)(rxdata + 0);
-
-        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << FabricLogger::End();
+        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
 
         if (txCount != txCount_prev_) {
             txCount_prev_ = txCount;
@@ -130,6 +141,7 @@ public:
         }
 
         can_frame frame;
+        int received_frames = 0;
         for (uint16_t i = 0; i < msgcount; ++i) {
             if (!deserialize(rxdata + 6 + i * 10, frame)) {
                 m_fabric_logger << "could not deserialize CAN frame" << FabricLogger::End();
@@ -160,8 +172,11 @@ public:
                 if (frames_count_ < QUEUE_LENGTH) {
                     ++frames_count_;
                 }
+                ++received_frames;
             }
         }
+
+        m_fabric_logger << "received " << received_frames << " frames, total frames: " << frames_count_ << FabricLogger::End();
 
         return true;
     }

@@ -93,7 +93,7 @@ public:
             rxCount = *(uint16_t*)(rxdata + 2);
         }
 
-        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << FabricLogger::End();
+        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
 
         if (rxCount != rxCount_prev_) {
             // new data arrived
