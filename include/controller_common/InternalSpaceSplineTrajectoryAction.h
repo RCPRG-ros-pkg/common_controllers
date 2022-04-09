@@ -312,18 +312,17 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
         if (g->trajectory.points[j].positions[i] > upperLimits_[remapTable_[i]]
             || g->trajectory.points[j].positions[i]
                 < lowerLimits_[remapTable_[i]]) {
-          Logger::log() << Logger::Debug << "Invalid goal [" << i << "]: "
+          std::cout << "Invalid goal [" << i << "]: "
               << upperLimits_[remapTable_[i]] << ">"
               << g->trajectory.points[j].positions[i] << ">"
-              << lowerLimits_[remapTable_[i]] << Logger::endl;
+              << lowerLimits_[remapTable_[i]] << std::endl;
           invalid_goal = true;
         }
       }
     }
 
     if (invalid_goal) {
-      Logger::log() << Logger::Debug
-          << "Trajectory contains invalid goal!" << Logger::endl;
+      std::cout << "Trajectory contains invalid goal!" << std::endl;
       res.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL;
       gh.setRejected(res, "");
       return;
