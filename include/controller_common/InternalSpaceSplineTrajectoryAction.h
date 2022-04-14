@@ -53,6 +53,7 @@
 #include <rtt_actionlib/rtt_action_server.h>
 
 #include "rtt_rosclock/rtt_rosclock.h"
+#include <rtt_rosparam/rosparam.h>
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <control_msgs/FollowJointTrajectoryActionGoal.h>
@@ -61,6 +62,8 @@
 #include <trajectory_msgs/JointTrajectory.h>
 
 #include "controller_common/InternalSpaceSplineTrajectory_status.h"
+
+#include <kin_dyn_model/kin_model.h>
 
 using namespace RTT;
 
@@ -97,6 +100,7 @@ class InternalSpaceSplineTrajectoryAction : public RTT::TaskContext {
   void bufferReadyCB();
 
   std::vector<std::string> jointNames_;
+  std::string robot_description_;
 
   std::vector<double> lowerLimits_;
   std::vector<double> upperLimits_;
@@ -140,6 +144,7 @@ InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::InternalSpaceSplineTrajec
   this->addProperty("joint_names", jointNames_);
   this->addProperty("lower_limits", lowerLimits_);
   this->addProperty("upper_limits", upperLimits_);
+  this->addProperty("robot_description", robot_description_);
 }
 
 template <class TRAJECTORY_TYPE >
@@ -167,16 +172,47 @@ bool InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::configureHook() {
 
   remapTable_.resize(TRAJECTORY_TYPE::DOFS);
 
-  if (lowerLimits_.size() != TRAJECTORY_TYPE::DOFS) {
-    Logger::log() << Logger::Error << "ROS param lower_limits has wrong size:"
-                         << lowerLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
-    return false;
-  }
+  if (lowerLimits_.size() == 0 && upperLimits_.size() == 0) {
+    std::cout << "Using joint limits from URDF" << std::endl;
+    // Get the rosparam service requester
+    boost::shared_ptr<rtt_rosparam::ROSParam> rosparam = this->getProvider<rtt_rosparam::ROSParam>("rosparam");
 
-  if (upperLimits_.size() != TRAJECTORY_TYPE::DOFS) {
-    Logger::log() << Logger::Error << "ROS param upper_limits has wrong size:"
-                         << upperLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
-    return false;
+      // Get the parameters
+    if(!rosparam) {
+        Logger::log() << Logger::Error << "Could not get ROS parameters from rtt_rosparam" << Logger::endl;
+        return false;
+    }
+
+    // Get the ROS parameter "/robot_description"
+    if (!rosparam->getAbsolute("robot_description")) {
+        Logger::log() << Logger::Error << "could not read ROS parameter \'robot_description\'" << Logger::endl;
+        return false;
+    }
+
+    std::shared_ptr<KinematicModel> kin_model_(new KinematicModel(robot_description_, jointNames_));
+
+    for (int i = 0; i < jointNames_.size(); ++i) {
+      int jnt_idx = kin_model_->getJointIndex(jointNames_[i]);
+      lowerLimits_.push_back( kin_model_->getLowerLimit(jnt_idx) );
+      upperLimits_.push_back( kin_model_->getUpperLimit(jnt_idx) );
+      std::cout << "Joint limits \"" << jointNames_[i] << "\": "
+            << kin_model_->getLowerLimit(jnt_idx) << ", "
+            << kin_model_->getUpperLimit(jnt_idx) << std::endl;
+    }
+  }
+  else {
+    std::cout << "Using joint limits from ROS param" << std::endl;
+    if (lowerLimits_.size() != TRAJECTORY_TYPE::DOFS) {
+      Logger::log() << Logger::Error << "ROS param lower_limits has wrong size:"
+                           << lowerLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
+      return false;
+    }
+
+    if (upperLimits_.size() != TRAJECTORY_TYPE::DOFS) {
+      Logger::log() << Logger::Error << "ROS param upper_limits has wrong size:"
+                           << upperLimits_.size() << ", expected: " << TRAJECTORY_TYPE::DOFS << Logger::endl;
+      return false;
+    }
   }
 
   stiffness_(0) = 1000;
@@ -283,7 +319,6 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
         return;
     }
 
-
     // fill remap table
     for (unsigned int i = 0; i < TRAJECTORY_TYPE::DOFS; i++) {
       int jointId = -1;
@@ -295,7 +330,7 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
       }
       if (jointId < 0) {
         Logger::log() << Logger::Error
-            << "Trajectory contains invalid joint" << Logger::endl;
+            << "A joint is missing in the commanded trajectory: " << jointNames_[i] << Logger::endl;
         res.error_code =
             control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS;
         gh.setRejected(res, "");
@@ -312,7 +347,7 @@ void InternalSpaceSplineTrajectoryAction<TRAJECTORY_TYPE >::goalCB(GoalHandle gh
         if (g->trajectory.points[j].positions[i] > upperLimits_[remapTable_[i]]
             || g->trajectory.points[j].positions[i]
                 < lowerLimits_[remapTable_[i]]) {
-          std::cout << "Invalid goal [" << i << "]: "
+          std::cout << "Invalid goal for joint " << i << " (" << jointNames_[i] << "): "
               << upperLimits_[remapTable_[i]] << ">"
               << g->trajectory.points[j].positions[i] << ">"
               << lowerLimits_[remapTable_[i]] << std::endl;

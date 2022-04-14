@@ -85,8 +85,6 @@ private:
   std::vector<std::string > urdf_joint_names_fixed_;
   std::vector<std::string > urdf_joint_names_;
   urdf::Model model_;
-  std::vector<double > moveable_idx_map_;
-  std::vector<double > fixed_idx_map_;
 };
 
 template <unsigned DOFS>
@@ -216,7 +214,6 @@ bool JointStatePublisher<DOFS>::configureHook() {
     }
     if (found) {
       names_verified.push_back( names_[i] );
-      moveable_idx_map_.push_back( i );
     }
   }
   names_ = names_verified;
@@ -238,21 +235,23 @@ bool JointStatePublisher<DOFS>::configureHook() {
     if (found) {
       constant_names_verified.push_back( constant_names_[i] );
       constant_positions_verified.push_back( constant_positions_[i] );
-      fixed_idx_map_.push_back( i );
     }
   }
   constant_names_ = constant_names_verified;
   constant_positions_ = constant_positions_verified;
 
   Logger::log() << Logger::Info << "moveable joints:" << Logger::endl;
+  std::cout << "moveable joints:" << std::endl;
   for (int i = 0; i < names_.size(); ++i) {
-    Logger::log() << Logger::Info << "  " << names_[i]
-                     << ", index mapping: " << i << " -> " << moveable_idx_map_[i] << Logger::endl;
+    Logger::log() << Logger::Info << "  " << names_[i] << Logger::endl;
+    std::cout << "  " << names_[i] << std::endl;
   }
+
   Logger::log() << Logger::Info << "fixed joints:" << Logger::endl;
+  std::cout << "fixed joints:" << std::endl;
   for (int i = 0; i < constant_names_.size(); ++i) {
-    Logger::log() << Logger::Info << "  " << constant_names_[i]
-                    << ", index mapping: " << i << " -> " << fixed_idx_map_[i] << Logger::endl;
+    Logger::log() << Logger::Info << "  " << constant_names_[i] << Logger::endl;
+    std::cout << "  " << constant_names_[i] << std::endl;
   }
 
   int DOFS_verified = names_.size() + constant_names_.size();
@@ -262,11 +261,11 @@ bool JointStatePublisher<DOFS>::configureHook() {
   joint_state_.effort.resize( DOFS_verified );
 
   for (unsigned int i = 0; i < names_.size(); i++) {
-    joint_state_.name[i] = names_[moveable_idx_map_[i]].c_str();
+    joint_state_.name[i] = names_[i].c_str();
   }
 
   for (unsigned int i = 0; i < constant_names_.size(); i++) {
-    joint_state_.name[names_.size()+i] = constant_names_[fixed_idx_map_[i]];
+    joint_state_.name[names_.size()+i] = constant_names_[i];
   }
 
   return true;
@@ -279,12 +278,12 @@ void JointStatePublisher<DOFS>::updateHook() {
     port_joint_effort_.read(joint_effort_);
     joint_state_.header.stamp = rtt_rosclock::host_now();
     for (unsigned int i = 0; i < names_.size(); i++) {
-      joint_state_.position[i] = joint_position_[moveable_idx_map_[i]];
-      joint_state_.velocity[i] = joint_velocity_[moveable_idx_map_[i]];
-      joint_state_.effort[i] = joint_effort_[moveable_idx_map_[i]];
+      joint_state_.position[i] = joint_position_[i];
+      joint_state_.velocity[i] = joint_velocity_[i];
+      joint_state_.effort[i] = joint_effort_[i];
     }
     for (unsigned int i = 0; i < constant_positions_.size(); i++) {
-      joint_state_.position[names_.size() + i] = constant_positions_[fixed_idx_map_[i]];
+      joint_state_.position[names_.size() + i] = constant_positions_[i];
       joint_state_.velocity[names_.size() + i] = 0;
       joint_state_.effort[names_.size() + i] = 0;
     }
