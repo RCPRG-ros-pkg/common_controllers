@@ -420,6 +420,7 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
                 resetTrajectory();
                 generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
                 setpoint_ = pos_msr_in_;
+                prev_setpoint_ = setpoint_;
                 
                 break;
             }
