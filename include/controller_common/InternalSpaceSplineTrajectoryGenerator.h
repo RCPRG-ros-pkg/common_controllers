@@ -392,9 +392,6 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
         // Check path tolerance
         for (int i = 0; i < TRAJECTORY_TYPE::DOFS; ++i) {
             if ( trajectory_.path_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.path_tolerance[i]) {
-                resetTrajectory();
-                generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
-                setpoint_ = pos_msr_in_;
                 m_fabric_logger << "path tolerance violated at joint " << i << FabricLogger::End();
                 m_fabric_logger << "pos_msr_in: ";
                 for (int j = 0; j < TRAJECTORY_TYPE::DOFS; ++j) {
@@ -419,6 +416,10 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
                     m_fabric_logger << trajectory_.path_tolerance[j] << ", ";
                 }
                 m_fabric_logger << FabricLogger::End();
+
+                resetTrajectory();
+                generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
+                setpoint_ = pos_msr_in_;
                 
                 break;
             }
