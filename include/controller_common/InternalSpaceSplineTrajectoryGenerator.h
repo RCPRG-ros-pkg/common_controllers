@@ -394,26 +394,27 @@ void InternalSpaceSplineTrajectoryGenerator<TRAJECTORY_TYPE >::updateHook() {
             if ( trajectory_.path_tolerance[i] > 0 && fabs(pos_msr_in_(i)-prev_setpoint_(i)) > trajectory_.path_tolerance[i]) {
                 resetTrajectory();
                 generator_status_ = internal_space_spline_trajectory_status::PATH_TOLERANCE_VIOLATED;
+                setpoint_ = pos_msr_in_;
                 m_fabric_logger << "path tolerance violated at joint " << i << FabricLogger::End();
-                m_fabric_logger << "pos_msr_in:";
+                m_fabric_logger << "pos_msr_in: ";
                 for (int j = 0; j < TRAJECTORY_TYPE::DOFS; ++j) {
                     m_fabric_logger << pos_msr_in_[j] << ", ";
                 }
                 m_fabric_logger << FabricLogger::End();
 
-                m_fabric_logger << "setpoint:";
+                m_fabric_logger << "setpoint: ";
                 for (int j = 0; j < TRAJECTORY_TYPE::DOFS; ++j) {
                     m_fabric_logger << setpoint_[j] << ", ";
                 }
                 m_fabric_logger << FabricLogger::End();
 
-                m_fabric_logger << "prev_setpoint:";
+                m_fabric_logger << "prev_setpoint: ";
                 for (int j = 0; j < TRAJECTORY_TYPE::DOFS; ++j) {
                     m_fabric_logger << prev_setpoint_[j] << ", ";
                 }
                 m_fabric_logger << FabricLogger::End();
 
-                m_fabric_logger << "trajectory_.path_tolerance:";
+                m_fabric_logger << "trajectory_.path_tolerance: ";
                 for (int j = 0; j < TRAJECTORY_TYPE::DOFS; ++j) {
                     m_fabric_logger << trajectory_.path_tolerance[j] << ", ";
                 }
