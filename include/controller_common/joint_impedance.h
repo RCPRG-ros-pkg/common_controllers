@@ -17,6 +17,11 @@
 #include "rtt/TaskContext.hpp"
 #include "rtt/Port.hpp"
 
+#include "fabric_logger/fabric_logger.h"
+
+using fabric_logger::FabricLoggerInterfaceRtPtr;
+using fabric_logger::FabricLogger;
+
 template <unsigned NUMBER_OF_JOINTS>
 class JointImpedance: public RTT::TaskContext {
  public:
@@ -56,6 +61,9 @@ class JointImpedance: public RTT::TaskContext {
   VectorNd k_, k0_;
   MatrixNd m_, d_, q_;
   MatrixNd tmpNN_;
+
+  FabricLoggerInterfaceRtPtr m_fabric_logger;
+
 };
 
 #ifdef EIGEN_RUNTIME_NO_MALLOC
@@ -72,6 +80,7 @@ JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name)
     : RTT::TaskContext(name, PreOperational)
     , port_joint_torque_command_("JointTorqueCommand_OUTPORT", true)
     , damping_(0.7)
+    , m_fabric_logger( FabricLogger::createNewInterfaceRt( name, 1000000) )
 {
 
   this->ports()->addPort("JointPosition_INPORT", port_joint_position_);
@@ -147,34 +156,31 @@ template <unsigned NUMBER_OF_JOINTS>
 void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
 
   if (port_joint_position_.read(joint_position_) != RTT::NewData) {
+    m_fabric_logger << "no data on port " << port_joint_position_.getName() << FabricLogger::End();
+
     error();
-    Logger::In in("JointImpedance::updateHook");
-    Logger::log() << Logger::Error << "no data on port "
-                  << port_joint_position_.getName() << Logger::endl;
     return;
   }
 
   if (port_joint_position_command_.read(joint_position_command_) != RTT::NewData) {
+    m_fabric_logger << "no data on port " << port_joint_position_command_.getName()
+                                                                          << FabricLogger::End();
+
     error();
-    Logger::In in("JointImpedance::updateHook");
-    Logger::log() << Logger::Error << "no data on port "
-                  << port_joint_position_command_.getName() << Logger::endl;
     return;
   }
 
   if (port_joint_stiffness_command_.read(k_) != RTT::NewData) {
+    m_fabric_logger << "no data on port " << port_joint_stiffness_command_.getName()
+                                                                          << FabricLogger::End();
     error();
-    Logger::In in("JointImpedance::updateHook");
-    Logger::log() << Logger::Error << "no data on port "
-                  << port_joint_stiffness_command_.getName() << Logger::endl;
     return;
   }
 
   if (port_joint_velocity_.read(joint_velocity_) != RTT::NewData) {
+    m_fabric_logger << "no data on port " << port_joint_velocity_.getName()
+                                                                          << FabricLogger::End();
     error();
-    Logger::In in("JointImpedance::updateHook");
-    Logger::log() << Logger::Error << "no data on port "
-                  << port_joint_velocity_.getName() << Logger::endl;
     return;
   }
 
@@ -187,10 +193,9 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   joint_torque_command_.noalias() = k_.cwiseProduct(joint_error_);
 
   if (port_mass_matrix_.read(m_) != RTT::NewData) {
+    m_fabric_logger << "no data on port " << port_mass_matrix_.getName()
+                                                                          << FabricLogger::End();
     error();
-    Logger::In in("JointImpedance::updateHook");
-    Logger::log() << Logger::Error << "no data on port "
-                  << port_mass_matrix_.getName() << Logger::endl;
     return;
   }
 
@@ -208,25 +213,22 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
   d_.noalias() = 2.0 * q_.transpose() * damping_ * tmpNN_ * q_;
 
   if (!joint_torque_command_.allFinite()) {
-    RTT::Logger::In in("JointImpedance::updateHook");
+    m_fabric_logger << "Non finite output form stiffness" << FabricLogger::End();
     error();
-    Logger::log() << Logger::Error << "Non finite output form stiffness" << Logger::endl;
   }
 
   joint_torque_command_.noalias() -= d_ * joint_velocity_;
 
   if (!joint_torque_command_.allFinite()) {
-    RTT::Logger::In in("JointImpedance::updateHook");
+    m_fabric_logger << "Non finite output form damping" << FabricLogger::End();
     error();
-    Logger::log() << Logger::Error << "Non finite output form damping" << Logger::endl;
   }
 
   joint_torque_command_.noalias() += nullspace_torque_command_;
 
   if (!joint_torque_command_.allFinite()) {
-    RTT::Logger::In in("JointImpedance::updateHook");
+    m_fabric_logger << "Non finite output form nullspace" << FabricLogger::End();
     error();
-    Logger::log() << Logger::Error << "Non finite output form nullspace" << Logger::endl;
   }
 
   port_joint_torque_command_.write(joint_torque_command_);
