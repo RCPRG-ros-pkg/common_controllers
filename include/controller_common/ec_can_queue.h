@@ -131,7 +131,7 @@ public:
             rxCount = *(uint16_t*)(rxdata + 0);
         }
 
-        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
+        //m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
 
         if (txCount != txCount_prev_) {
             txCount_prev_ = txCount;
@@ -176,7 +176,7 @@ public:
             }
         }
 
-        m_fabric_logger << "received " << received_frames << " frames, total frames: " << frames_count_ << FabricLogger::End();
+        //m_fabric_logger << "received " << received_frames << " frames, total frames: " << frames_count_ << FabricLogger::End();
 
         return true;
     }

@@ -93,7 +93,7 @@ public:
             rxCount = *(uint16_t*)(rxdata + 2);
         }
 
-        m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
+        //m_fabric_logger << "txCount: " << txCount << ", rxCount: " << rxCount << ", inv: " << (invert_rx_tx_?"true":"false") << FabricLogger::End();
 
         if (rxCount != rxCount_prev_) {
             // new data arrived
@@ -131,7 +131,7 @@ public:
             }
         }
 
-        m_fabric_logger << "msgs_count: " << msgs_count << FabricLogger::End();
+        //m_fabric_logger << "msgs_count: " << msgs_count << FabricLogger::End();
 
         if (invert_rx_tx_) {
             *(uint16_t*)(txdata + 2) = txCount_prev_;
