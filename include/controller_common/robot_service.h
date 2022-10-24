@@ -22,11 +22,9 @@ namespace controller_common {
 template <unsigned DOFS, unsigned EFFECTORS>
 class RobotService: public RTT::Service {
  public:
-  explicit RobotService(RTT::TaskContext* owner) :
-      RTT::Service("robot", owner) {
+  explicit RobotService(RTT::TaskContext* owner, const std::string& service_name) :
+      RTT::Service(service_name, owner) {
     this->addOperation("jacobian", &RobotService::jacobian, this,
-                        RTT::ClientThread);
-    this->addOperation("inertia", &RobotService::inertia, this,
                         RTT::ClientThread);
     this->addOperation("fkin", &RobotService::fkin, this, RTT::ClientThread);
     this->addOperation("dofs", &RobotService::getNumberOfDofs, this,
@@ -36,13 +34,11 @@ class RobotService: public RTT::Service {
   }
 
   typedef Eigen::Matrix<double, EFFECTORS*6, DOFS> Jacobian;
-  typedef Eigen::Matrix<double, DOFS, DOFS> Inertia;
   typedef Eigen::Matrix<double, DOFS, 1> Joints;
   typedef Eigen::Matrix<double, 4, 1> ToolMass;
   typedef Eigen::Matrix<double, 7, 1> Tool;
 
   virtual void jacobian(Jacobian &, const Joints &, const Tool*) = 0;
-  virtual void inertia(Inertia &, const Joints &, const ToolMass*) = 0;
   virtual void fkin(Eigen::Affine3d *, const Joints &, const Tool*) = 0;
   virtual int getNumberOfDofs(void) = 0;
   virtual int getNumberOfEffectors(void) = 0;

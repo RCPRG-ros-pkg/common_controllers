@@ -16,7 +16,7 @@
 
 #include "rtt/TaskContext.hpp"
 
-#include "controller_common/robot.h"
+#include "rtt/RTT.hpp"
 
 using namespace RTT;
 
@@ -36,8 +36,6 @@ class MassTest: public RTT::TaskContext {
   RTT::OutputPort<Inertia> port_mass_matrix_;
   RTT::InputPort<Eigen::Matrix<double, 7, 7> > port_mass_matrix_left_;
   RTT::InputPort<Eigen::Matrix<double, 7, 7> > port_mass_matrix_right_;
-
-  boost::shared_ptr<controller_common::Robot<DOFS, EFFECTORS> > robot_;
 
   Inertia M_;
   Eigen::Matrix<double, 7, 7> Ml_, Mr_;
@@ -66,25 +64,6 @@ template <unsigned DOFS, unsigned EFFECTORS>
 bool MassTest<DOFS, EFFECTORS>::configureHook() {
   RTT::Logger::In in("MassTest::configureHook");
 
-  robot_ = this->getProvider<controller_common::Robot<DOFS, EFFECTORS> >("robot");
-  if (!robot_) {
-    Logger::log() << Logger::Error << "Unable to load RobotService"
-                         << Logger::endl;
-    return false;
-  }
-
-  if (robot_->dofs() != DOFS) {
-    Logger::log() << Logger::Error << "wrong number of DOFs: " << robot_->dofs()
-                         << ", expected " << DOFS << Logger::endl;
-    return false;
-  }
-
-  if (robot_->effectors() != EFFECTORS) {
-    Logger::log() << Logger::Error << "wrong number of effectors: " << robot_->effectors()
-                         << ", expected " << EFFECTORS << Logger::endl;
-    return false;
-  }
-
   port_mass_matrix_.setDataSample(M_);
 
   return true;
@@ -102,8 +81,6 @@ void MassTest<DOFS, EFFECTORS>::updateHook() {
     error();
     return;
   }
-
-  //robot_->inertia(M_, joint_position_, 0);
 
   M_.setZero();
 

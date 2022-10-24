@@ -114,6 +114,8 @@ class CartesianImpedance: public RTT::TaskContext {
 
   // Parameters
   bool enable_rt_logging_;
+
+  std::string service_name_;
 };
 
 #ifdef EIGEN_RUNTIME_NO_MALLOC
@@ -141,16 +143,19 @@ template <unsigned DOFS, unsigned EFFECTORS>
     this->ports()->addPort(port_joint_torque_command_);
     this->ports()->addPort(port_nullspace_torque_command_);
     addProperty("enable_rt_logging", enable_rt_logging_);
+
+    this->properties()->addProperty("service_name", service_name_);
   }
 
 template <unsigned DOFS, unsigned EFFECTORS>
   bool CartesianImpedance<DOFS, EFFECTORS>::configureHook() {
     RTT::Logger::In in("CartesianImpedance::configureHook");
 
-    robot_ = this->getProvider<Robot>("robot");
+    robot_ = this->getProvider<Robot>(service_name_);
     if (!robot_) {
-      m_fabric_logger << "ERROR: Unable to load RobotService" << FabricLogger::End();
-      Logger::log() << Logger::Error << "Unable to load RobotService"
+      m_fabric_logger << "ERROR: Unable to load RobotService: " << service_name_
+          << FabricLogger::End();
+      Logger::log() << Logger::Error << "Unable to load RobotService: " << service_name_
                            << Logger::endl;
       return false;
     }

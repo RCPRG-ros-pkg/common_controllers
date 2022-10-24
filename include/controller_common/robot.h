@@ -22,12 +22,10 @@ class Robot : public RTT::ServiceRequester {
  public:
   explicit Robot(RTT::TaskContext *owner) :
     RTT::ServiceRequester("robot", owner),
-    inertia("inertia"),
     jacobian("jacobian"),
     fkin("fkin"),
     dofs("dofs"),
     effectors("effectors") {
-    this->addOperationCaller(inertia);
     this->addOperationCaller(jacobian);
     this->addOperationCaller(fkin);
     this->addOperationCaller(dofs);
@@ -35,12 +33,10 @@ class Robot : public RTT::ServiceRequester {
   }
 
   typedef Eigen::Matrix<double, EFFECTORS*6, DOFS> Jacobian;
-  typedef Eigen::Matrix<double, DOFS, DOFS> Inertia;
   typedef Eigen::Matrix<double, DOFS, 1> Joints;
   typedef Eigen::Matrix<double, 4, 1> ToolMass;
   typedef Eigen::Matrix<double, 7, 1> Tool;
 
-  RTT::OperationCaller<void(Inertia &, const Joints &, const ToolMass*)> inertia;
   RTT::OperationCaller<void(Jacobian &, const Joints &, const Tool*)> jacobian;
   RTT::OperationCaller<void(Eigen::Affine3d *, const Joints &, const Tool*)> fkin;
   RTT::OperationCaller<int(void)> dofs;
