@@ -17,6 +17,8 @@
 #include "rtt/TaskContext.hpp"
 #include "rtt/Port.hpp"
 
+#include <geometry_msgs/Pose.h>
+
 #include "fabric_logger/fabric_logger.h"
 
 using fabric_logger::FabricLoggerInterfaceRtPtr;
@@ -44,6 +46,9 @@ class JointImpedance: public RTT::TaskContext {
   RTT::InputPort<VectorNd> port_joint_velocity_;
   RTT::InputPort<MatrixNd> port_mass_matrix_;
   RTT::InputPort<VectorNd> port_nullspace_torque_command_;
+  RTT::InputPort<geometry_msgs::Pose> port_r_wrist_pose_;
+  RTT::InputPort<geometry_msgs::Pose> port_l_wrist_pose_;
+
   RTT::OutputPort<VectorNd> port_joint_torque_command_;
 
   VectorNd joint_position_;
@@ -64,6 +69,8 @@ class JointImpedance: public RTT::TaskContext {
 
   FabricLoggerInterfaceRtPtr m_fabric_logger;
 
+  double prev_torso_stiffness_;
+  int add_stiffness_torso_;
 };
 
 #ifdef EIGEN_RUNTIME_NO_MALLOC
@@ -81,6 +88,8 @@ JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name)
     , port_joint_torque_command_("JointTorqueCommand_OUTPORT", true)
     , damping_(0.7)
     , m_fabric_logger( FabricLogger::createNewInterfaceRt( name, 1000000) )
+    , prev_torso_stiffness_(0.0)
+    , add_stiffness_torso_(-1)
 {
 
   this->ports()->addPort("JointPosition_INPORT", port_joint_position_);
@@ -91,9 +100,12 @@ JointImpedance<NUMBER_OF_JOINTS>::JointImpedance(const std::string& name)
   this->ports()->addPort(port_joint_torque_command_);
   this->ports()->addPort("NullSpaceTorqueCommand_INPORT",
                          port_nullspace_torque_command_);
+  this->ports()->addPort("rWristPose_INPORT", port_r_wrist_pose_);
+  this->ports()->addPort("lWristPose_INPORT", port_l_wrist_pose_);
 
   this->properties()->addProperty("initial_stiffness", initial_stiffness_);
   this->properties()->addProperty("damping", damping_);
+  this->properties()->addProperty("add_stiffness_torso", add_stiffness_torso_);
 }
 
 template <unsigned NUMBER_OF_JOINTS>
@@ -103,6 +115,15 @@ JointImpedance<NUMBER_OF_JOINTS>::~JointImpedance() {
 template <unsigned NUMBER_OF_JOINTS>
 bool JointImpedance<NUMBER_OF_JOINTS>::configureHook() {
   Logger::In in("JointImpedance::configureHook");
+
+  if (add_stiffness_torso_ != 0 && add_stiffness_torso_ != 1) {
+    log(RTT::Error) << "JointImpedance: wrong value for parameter add_stiffness_torso: "
+                                  << add_stiffness_torso_ << ", should be 0 or 1" << Logger::endl;
+    return false;
+  }
+
+  std::cout << "JointImpedance(" << getName() << "): add_stiffness_torso: "
+                                                  << add_stiffness_torso_ << std::endl;
 
   if ((initial_stiffness_.size() != NUMBER_OF_JOINTS)) {
     log(RTT::Error) << "invalid size of initial_stiffness: "
@@ -199,7 +220,42 @@ void JointImpedance<NUMBER_OF_JOINTS>::updateHook() {
     return;
   }
 
+  // Add some stiffness for torso, if the arms are widely spread
+  double stiffness_torso_add = 0.0;
+  if (add_stiffness_torso_ == 1) {
+    geometry_msgs::Pose r_wrist_pose;
+    geometry_msgs::Pose l_wrist_pose;
+    const double wrist_dist_min = 0.25;
+    const double wrist_dist_max = 1.25;
+    const double max_stiffness_torso = k_(0)*0.5;
+    if (port_r_wrist_pose_.read(r_wrist_pose) == RTT::NewData) {
+      double wrist_dist = sqrt(r_wrist_pose.position.x*r_wrist_pose.position.x +
+                                r_wrist_pose.position.y*r_wrist_pose.position.y);
+      stiffness_torso_add += max_stiffness_torso * std::min(1.0,
+                                std::max(0.0,
+                                wrist_dist - wrist_dist_min) / (wrist_dist_max - wrist_dist_min));
+    }
+    if (port_l_wrist_pose_.read(l_wrist_pose) == RTT::NewData) {
+      double wrist_dist = sqrt(l_wrist_pose.position.x*l_wrist_pose.position.x +
+                                l_wrist_pose.position.y*l_wrist_pose.position.y);
+      stiffness_torso_add += max_stiffness_torso * std::min(1.0,
+                                std::max(0.0,
+                                wrist_dist - wrist_dist_min) / (wrist_dist_max - wrist_dist_min));
+    }
+  }
+
+  double original_torso_stiffness = k_(0);
+  k_(0) = k_(0) + stiffness_torso_add;
+
+  // debug print
+  // if (fabs(k_(0) - prev_torso_stiffness_) > 100) {
+  //   prev_torso_stiffness_ = k_(0);
+  //   std::cout << "JointImpedance: new stiffness for torso: " << k_(0) << std::endl;
+  // }
+
   tmpNN_ = k_.asDiagonal();
+
+  k_(0) = original_torso_stiffness;
 
   es_.compute(tmpNN_, m_);
 
